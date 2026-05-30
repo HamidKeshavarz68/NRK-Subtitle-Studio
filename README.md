@@ -34,10 +34,11 @@ npm install
 npm run build
 ```
 
-This compiles:
+This type-checks with `tsc` and bundles the TypeScript sources with
+[esbuild](https://esbuild.github.io/) into:
 
-- `src/content.ts`     → `dist/content.js`  (runs on the NRK page)
-- `src/background.ts`  → `dist/background.js` (service worker — proxies
+- `src/content/*.ts`    → `dist/content/index.js`    (runs on the NRK page)
+- `src/background/*.ts` → `dist/background/index.js` (service worker — proxies
   Google Translate calls so the page CSP can't block them)
 
 Then:
@@ -72,8 +73,9 @@ Then:
 
 | Script | What it does |
 | --- | --- |
-| `npm run build` | Compile TypeScript → `dist/`. |
-| `npm run watch` | Same, in watch mode for development. |
+| `npm run typecheck` | Type-check the sources with `tsc` (no emit). |
+| `npm run build` | Type-check, then bundle TypeScript → `dist/` with esbuild. |
+| `npm run watch` | Rebuild on change (esbuild watch mode). |
 | `npm run clean` | Delete the `dist/` folder. |
 | `npm run rebuild` | `clean` + `build`. |
 | `npm run package` | Rebuild and produce `build/nrk-subtitle-studio.zip` ready to upload to the Chrome Web Store. |
@@ -198,19 +200,29 @@ my-extension/
 ├── README.md
 ├── CHANGELOG.md
 ├── LICENSE
+├── scripts/
+│   └── build.mjs              esbuild bundler (one-off + --watch)
 ├── public/
 │   └── icons/                 Toolbar / web-store icons (placeholder SVG)
 └── src/
     ├── background/
     │   └── index.ts           Service worker — Google Translate proxy
     ├── content/
-    │   └── index.ts           Overlay UI, capture, translator, render
+    │   ├── index.ts           Entry: SPA gating + mount lifecycle
+    │   ├── config.ts          Constants, language list, shared types
+    │   ├── utils.ts           Pure helpers (strip/normalize/escape/time/storage)
+    │   ├── state.ts           Shared state + persisted settings
+    │   ├── translator.ts      Google Translate proxy + coalesced batch engine
+    │   ├── native-subtitles.ts Hide/restore NRK's native captions
+    │   ├── renderer.ts        Status line + rolling-window render
+    │   ├── overlay.ts         Overlay DOM, toolbar, drag/resize, click-to-seek
+    │   └── video.ts           Video/track discovery, attach/detach, snapshots
     └── styles/
         └── overlay.css        Overlay styles
 ```
 
 Built with `npm run build` → `dist/content/index.js` and
-`dist/background/index.js`.
+`dist/background/index.js` (each a single bundled file).
 
 ## Notes & limitations
 
