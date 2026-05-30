@@ -34,10 +34,11 @@ npm install
 npm run build
 ```
 
-This compiles:
+This type-checks with `tsc` and bundles the TypeScript sources with
+[esbuild](https://esbuild.github.io/) into:
 
-- `src/content.ts`     → `dist/content.js`  (runs on the NRK page)
-- `src/background.ts`  → `dist/background.js` (service worker — proxies
+- `src/content/*.ts`    → `dist/content/index.js`    (runs on the NRK page)
+- `src/background/*.ts` → `dist/background/index.js` (service worker — proxies
   Google Translate calls so the page CSP can't block them)
 
 Then:
@@ -66,18 +67,34 @@ Then:
 | **Mode** | `Original` / `Translated` / `Bilingual`. Bilingual shows the original above and a smaller, blue, italic translation below. Hidden when language is off. |
 | **0.5× – 2×** | Sets `video.playbackRate` and re-asserts it if the player tries to reset. |
 | **A− / A+** | Cue font size (10 px – 32 px, persisted). |
+| **⚙ Settings** | Opens a dropdown to enable/disable translation and switch the menu language (English / Norsk). |
 | **Hide / Show** | Collapses the window to just the toolbar, or restores its previous size. |
+
+The settings dropdown is localised with a small built-in i18n layer (`src/content/i18n.ts`).
+Switching the menu language re-renders every toolbar label and tooltip on the fly.
+Turning **Enable translation** off hides the language/mode controls entirely and
+stops any translation requests. The dropdown also shows the current extension
+version and quick links to email the author or open the GitHub repository for
+bugs, issues and suggestions.
 
 ## Scripts
 
 | Script | What it does |
 | --- | --- |
-| `npm run build` | Compile TypeScript → `dist/`. |
-| `npm run watch` | Same, in watch mode for development. |
+| `npm run typecheck` | Type-check the sources with `tsc` (no emit). |
+| `npm run build` | Type-check, then bundle TypeScript → `dist/` with esbuild. |
+| `npm run watch` | Rebuild on change (esbuild watch mode). |
 | `npm run clean` | Delete the `dist/` folder. |
 | `npm run rebuild` | `clean` + `build`. |
 | `npm run package` | Rebuild and produce `build/nrk-subtitle-studio.zip` ready to upload to the Chrome Web Store. |
-| `npm run crx` | Rebuild and produce `build/nrk-subtitle-studio.crx` (auto-creates `build/key.pem` on first run). |
+| `npm run crx` | Rebuild and produce `build/nrk-subtitle-studio.crx` (auto-creates the signing key at `.crx-key/key.pem` on first run). |
+
+> The `.crx` signing key lives in `.crx-key/` (git-ignored), **not** under
+> `build/`. It is kept in a dot-prefixed folder on purpose: Chrome's
+> **Load unpacked** recursively scans the project folder, and it warns if a
+> private key file is found inside the extension. Chrome ignores files and
+> folders whose names start with `.`, so the key never trips that warning.
+> Back this file up and reuse it for every build to keep a stable extension ID.
 
 ## Releasing to the Chrome Web Store
 
@@ -128,19 +145,32 @@ GitHub Actions will build, upload, and publish.
 ### Subtitle capture
 
 A content script finds the player's `<video>` element (works across NRK's SPA
-navigations) and listens for `addtrack` on `video.textTracks`. Whenever a
-subtitle track arrives, the script flips its `mode` to `'hidden'` so the
-browser parses every WebVTT cue into `track.cues` — without altering what's
-drawn on the video. While the panel is expanded, any track currently in
-`'showing'` mode is also flipped to `'hidden'` so NRK's native captions
-don't double up with our overlay; on **Hide** we restore the previous mode.
+navigations) and listens for `addtrack` on `video.textTracks`, plus `cuechange`
+on the subtitle track and a periodic re-scan. Whenever the cue set changes it is
+snapshotted into shared state.
 
-### DOM-rendered subtitle hider
+The script **never changes `track.mode`**. NRK's player streams subtitle
+segments only while its text track is visible, so forcing the track to
+`'hidden'` (an earlier approach) made the player stop loading cues — the overlay
+would freeze on the last cue while the video kept playing. Leaving the
+user-selected track untouched keeps cues flowing for the whole programme.
 
-NRK paints its on-video subtitle as a styled DOM node, not via the native
-`::cue` renderer. While the panel is expanded, the script walks the player
-container and `visibility:hidden`s any leaf-ish element whose visible text
-matches the current cue. Restored on collapse / cue change.
+Because the cue set is delivered (and evicted) in segments, the snapshot is
+guarded by a content *signature* (count + boundary timestamps), not just length,
+so it refreshes correctly even when cues are appended, replaced or rolled
+forward.
+
+### Hiding NRK's native captions
+
+Since `track.mode` is left alone, the native captions are suppressed *visually*
+instead, fully reversibly:
+
+- a `video::cue { … }` stylesheet covers the browser's native cue renderer, and
+- NRK paints its on-video subtitle as a styled DOM node (not via `::cue`), so the
+  script also walks the player container and `visibility:hidden`s any leaf-ish
+  element whose visible text matches the current cue.
+
+Both are removed when the panel collapses or you leave the video page.
 
 ### Rendering & rolling window
 
@@ -187,6 +217,8 @@ across reloads, but **size is** (`localStorage.nsr.size`).
 | `nsr.fontSize` | px |
 | `nsr.size` | `{ "w": …, "h": … }` |
 | `nsr.playbackRate` | number 0.25 – 4 |
+| `nsr.translationEnabled` | `true` / `false` (translation master switch) |
+| `nsr.uiLang` | `en` / `no` (menu language) |
 
 ## File layout
 
@@ -198,19 +230,30 @@ my-extension/
 ├── README.md
 ├── CHANGELOG.md
 ├── LICENSE
+├── scripts/
+│   └── build.mjs              esbuild bundler (one-off + --watch)
 ├── public/
 │   └── icons/                 Toolbar / web-store icons (placeholder SVG)
 └── src/
     ├── background/
     │   └── index.ts           Service worker — Google Translate proxy
     ├── content/
-    │   └── index.ts           Overlay UI, capture, translator, render
+    │   ├── index.ts           Entry: SPA gating + mount lifecycle
+    │   ├── config.ts          Constants, language list, shared types
+    │   ├── utils.ts           Pure helpers (strip/normalize/escape/time/storage)
+    │   ├── state.ts           Shared state + persisted settings
+    │   ├── translator.ts      Google Translate proxy + coalesced batch engine
+    │   ├── native-subtitles.ts Hide/restore NRK's native captions
+    │   ├── renderer.ts        Status line + rolling-window render
+    │   ├── overlay.ts         Overlay DOM, toolbar, settings menu, drag/resize, click-to-seek
+    │   ├── i18n.ts            Menu i18n (en/no) for the toolbar + settings UI
+    │   └── video.ts           Video/track discovery, attach/detach, snapshots
     └── styles/
         └── overlay.css        Overlay styles
 ```
 
 Built with `npm run build` → `dist/content/index.js` and
-`dist/background/index.js`.
+`dist/background/index.js` (each a single bundled file).
 
 ## Notes & limitations
 
