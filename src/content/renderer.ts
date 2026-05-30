@@ -14,6 +14,7 @@ import { cueText, escapeHtml, formatTime } from "./utils";
 import { listEl, statusEl } from "./overlay";
 import { hideNativeDomSubtitles } from "./native-subtitles";
 import { enqueueTranslate, getTranslation } from "./translator";
+import { t } from "./i18n";
 
 export function setStatus(text: string): void {
   statusEl.textContent = text;
@@ -54,7 +55,7 @@ function translatedHtmlFor(idx: number): string {
   const tr = getTranslation(idx);
   if (tr?.state === "done") return escapeHtml(tr.text).replace(/\n/g, "<br/>");
   if (tr?.state === "error") {
-    return `<span class="nsr-warn" title="Translation failed (click cue to retry by changing language)">⚠</span>`;
+    return `<span class="nsr-warn" title="${escapeHtml(t("translation_failed"))}">⚠</span>`;
   }
   return `<span class="nsr-pending">…</span>`;
 }
@@ -75,18 +76,16 @@ function cueInnerHtml(idx: number, original: string): string {
 
 export function render(): void {
   if (!state.cues.length) {
-    listEl.innerHTML = `<div class="nsr-empty">Waiting for subtitles…<br/>
-      Open the NRK player's CC/subtitle menu and select a language —
-      every cue will then be loaded and rolled here.</div>`;
+    listEl.innerHTML = `<div class="nsr-empty">${t("empty")}</div>`;
     return;
   }
 
-  const t = state.video?.currentTime ?? 0;
-  const active = findActiveIndex(t);
+  const now = state.video?.currentTime ?? 0;
+  const active = findActiveIndex(now);
 
   // Hide NRK's DOM-rendered subtitle for the active cue. Must run every render,
   // not gated by the window-change cache below.
-  hideNativeDomSubtitles(active >= 0 ? (state.cues[active] as VTTCue) : null, t);
+  hideNativeDomSubtitles(active >= 0 ? (state.cues[active] as VTTCue) : null, now);
 
   const anchor = active >= 0 ? active : Math.max(0, active + 1);
   const start = Math.max(0, anchor - ROLL.past);
@@ -110,7 +109,7 @@ export function render(): void {
     // A cue is "past" only once the NEXT cue has started (or, for the last cue,
     // once its own endTime has passed) — keeps the active line lit through gaps.
     const next = state.cues[i + 1] as VTTCue | undefined;
-    const isPast = next ? next.startTime <= t : c.endTime < t;
+    const isPast = next ? next.startTime <= now : c.endTime < now;
     const cls =
       i === active ? "nsr-cue nsr-active" :
       isPast ? "nsr-cue nsr-past" :

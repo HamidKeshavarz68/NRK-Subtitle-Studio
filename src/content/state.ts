@@ -35,6 +35,7 @@ export interface Settings {
   displayMode: DisplayMode;
   fontSize: number;
   playbackRate: number;
+  translationEnabled: boolean;
 }
 
 export const settings: Settings = {
@@ -42,6 +43,7 @@ export const settings: Settings = {
   displayMode: (readStorage(STORAGE_KEYS.displayMode) as DisplayMode) || "bilingual",
   fontSize: clampFont(parseInt(readStorage(STORAGE_KEYS.fontSize) || "", 10) || FONT.default),
   playbackRate: clampSpeed(parseFloat(readStorage(STORAGE_KEYS.playbackRate) || "") || SPEED.default),
+  translationEnabled: readStorage(STORAGE_KEYS.translationEnabled) !== "false",
 };
 
 export function setTargetLang(lang: string): void {
@@ -54,6 +56,11 @@ export function setDisplayMode(mode: DisplayMode): void {
   writeStorage(STORAGE_KEYS.displayMode, mode);
 }
 
+export function setTranslationEnabled(enabled: boolean): void {
+  settings.translationEnabled = enabled;
+  writeStorage(STORAGE_KEYS.translationEnabled, String(enabled));
+}
+
 export function setFontSize(size: number): void {
   settings.fontSize = clampFont(size);
   writeStorage(STORAGE_KEYS.fontSize, String(settings.fontSize));
@@ -61,7 +68,9 @@ export function setFontSize(size: number): void {
 
 /** True when translation output should be requested/shown at all. */
 export const isTranslationActive = (): boolean =>
-  settings.targetLang !== "off" && settings.displayMode !== "original";
+  settings.translationEnabled &&
+  settings.targetLang !== "off" &&
+  settings.displayMode !== "original";
 
 /** Source language of the current track (base code), defaulting to Norwegian. */
 export function detectSourceLang(): string {

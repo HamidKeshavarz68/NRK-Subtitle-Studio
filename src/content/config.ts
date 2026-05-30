@@ -4,8 +4,17 @@
 
 export type DisplayMode = "original" | "translated" | "bilingual";
 export type TranslationState = "pending" | "done" | "error";
+export type UiLang = "en" | "no";
 
 export const OVERLAY_ID = "nrk-sub-roller";
+
+/** Selectable UI (menu) languages. */
+export const UI_LANGS: { code: UiLang; name: string }[] = [
+  { code: "en", name: "English" },
+  { code: "no", name: "Norsk" },
+];
+
+export const DEFAULT_UI_LANG: UiLang = "en";
 
 /** localStorage keys for all persisted settings. */
 export const STORAGE_KEYS = {
@@ -14,6 +23,8 @@ export const STORAGE_KEYS = {
   playbackRate: "nsr.playbackRate",
   targetLang: "nsr.targetLang",
   displayMode: "nsr.displayMode",
+  translationEnabled: "nsr.translationEnabled",
+  uiLang: "nsr.uiLang",
 } as const;
 
 export const FONT = { min: 10, max: 32, step: 2, default: 13 } as const;

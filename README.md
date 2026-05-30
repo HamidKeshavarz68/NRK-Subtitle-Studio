@@ -67,7 +67,15 @@ Then:
 | **Mode** | `Original` / `Translated` / `Bilingual`. Bilingual shows the original above and a smaller, blue, italic translation below. Hidden when language is off. |
 | **0.5× – 2×** | Sets `video.playbackRate` and re-asserts it if the player tries to reset. |
 | **A− / A+** | Cue font size (10 px – 32 px, persisted). |
+| **⚙ Settings** | Opens a dropdown to enable/disable translation and switch the menu language (English / Norsk). |
 | **Hide / Show** | Collapses the window to just the toolbar, or restores its previous size. |
+
+The settings dropdown is localised with a small built-in i18n layer (`src/content/i18n.ts`).
+Switching the menu language re-renders every toolbar label and tooltip on the fly.
+Turning **Enable translation** off hides the language/mode controls entirely and
+stops any translation requests. The dropdown also shows the current extension
+version and quick links to email the author or open the GitHub repository for
+bugs, issues and suggestions.
 
 ## Scripts
 
@@ -189,6 +197,8 @@ across reloads, but **size is** (`localStorage.nsr.size`).
 | `nsr.fontSize` | px |
 | `nsr.size` | `{ "w": …, "h": … }` |
 | `nsr.playbackRate` | number 0.25 – 4 |
+| `nsr.translationEnabled` | `true` / `false` (translation master switch) |
+| `nsr.uiLang` | `en` / `no` (menu language) |
 
 ## File layout
 
@@ -215,7 +225,8 @@ my-extension/
     │   ├── translator.ts      Google Translate proxy + coalesced batch engine
     │   ├── native-subtitles.ts Hide/restore NRK's native captions
     │   ├── renderer.ts        Status line + rolling-window render
-    │   ├── overlay.ts         Overlay DOM, toolbar, drag/resize, click-to-seek
+    │   ├── overlay.ts         Overlay DOM, toolbar, settings menu, drag/resize, click-to-seek
+    │   ├── i18n.ts            Menu i18n (en/no) for the toolbar + settings UI
     │   └── video.ts           Video/track discovery, attach/detach, snapshots
     └── styles/
         └── overlay.css        Overlay styles
