@@ -127,6 +127,26 @@ export function render(): void {
 
   const activeEl = listEl.querySelector(".nsr-active") as HTMLElement | null;
   if (activeEl) {
-    activeEl.scrollIntoView({ block: "center", behavior: "smooth" });
+    // Pin the active cue's TOP at a fixed offset inside the list so its
+    // on-screen Y stays put when:
+    //   - cues above/below change height (translations arriving, new cues
+    //     appended) — scrollTop is recomputed from offsetTop so the active
+    //     line is re-anchored to the same screen position.
+    //   - the active cue itself grows (e.g. a translation appears beneath
+    //     the original) — pinning the TOP (not the centre) means the
+    //     original line doesn't move; new content extends downward.
+    // Snap instantly on re-renders to avoid visible bobbing; only animate
+    // when the active cue index actually changes (a true line transition).
+    const prevActive = (listEl as any).__nsrActive as number | undefined;
+    const offsetFromTop = Math.round(listEl.clientHeight * 0.4);
+    const target = Math.max(0, activeEl.offsetTop - offsetFromTop);
+    if (prevActive === active) {
+      // Direct assignment bypasses the CSS `scroll-behavior: smooth` rule
+      // (which would otherwise animate every adjustment and cause shake).
+      listEl.scrollTop = target;
+    } else {
+      listEl.scrollTo({ top: target, behavior: "smooth" });
+    }
+    (listEl as any).__nsrActive = active;
   }
 }
