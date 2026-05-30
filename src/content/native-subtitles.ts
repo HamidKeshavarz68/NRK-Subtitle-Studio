@@ -1,19 +1,19 @@
 /**
  * Hiding NRK's own on-video captions while the overlay is expanded.
  *
- * Two renderers are involved:
- *  - the native `track.mode` renderer (flipped 'showing' → 'hidden'), and
- *  - NRK's bespoke DOM nodes, which we match by visible text and
- *    `visibility:hidden` for the active cue.
- * Both are restored when the overlay collapses.
+ * IMPORTANT: we must NOT flip the subtitle `track.mode` to hide it. NRK's player
+ * (Shaka) only *streams* subtitle segments while its text track is visible, so
+ * forcing the track to 'hidden' makes cue loading stop dead — the overlay then
+ * freezes on the last-loaded cue while the video plays on. Instead we leave the
+ * user-selected track exactly as it is and suppress the *visual* output two
+ * ways, both fully reversible:
+ *  - a `::cue` stylesheet (covers the browser's native cue renderer), and
+ *  - matching NRK's bespoke DOM caption nodes by text and `visibility:hidden`.
  */
 
 import { OVERLAY_ID } from "./config";
 import { state, ui } from "./state";
-import { cueText, isSubtitleTrack, normalizeWhitespace } from "./utils";
-
-/** Marker for a native track whose mode we overrode (so we can restore it). */
-export const NATIVE_OVERRIDDEN = "__nsrOverridden";
+import { cueText, normalizeWhitespace } from "./utils";
 
 const hiddenDomEls = new Set<HTMLElement>();
 
@@ -97,25 +97,40 @@ export function hideNativeDomSubtitles(cue: VTTCue | null, t: number): void {
 }
 
 /**
- * Apply the expand/collapse policy to native track rendering:
- *  - Expanded:  flip any 'showing' subtitle track to 'hidden' (and remember it).
- *  - Collapsed: restore any track we previously hid, plus our hidden DOM nodes.
+ * Apply the expand/collapse policy to native caption rendering. We never change
+ * `track.mode` (that would stop the player streaming cues). When expanded we add
+ * a `::cue` hide style; when collapsed we remove it and un-hide any DOM nodes.
  */
+const CUE_HIDE_STYLE_ID = "nsr-native-cue-hide";
+
+function setNativeCueHidden(hidden: boolean): void {
+  const existing = document.getElementById(CUE_HIDE_STYLE_ID);
+  if (hidden) {
+    if (existing) return;
+    const style = document.createElement("style");
+    style.id = CUE_HIDE_STYLE_ID;
+    // Hide the browser's native cue renderer for every video on the page. The
+    // overlay only mounts on video pages and only while expanded, so this is
+    // scoped in practice and fully removed on collapse.
+    style.textContent = "video::cue{opacity:0!important;visibility:hidden!important;}";
+    (document.head || document.documentElement).appendChild(style);
+  } else if (existing) {
+    existing.remove();
+  }
+}
+
 export function applyNativeSubtitleVisibility(): void {
   if (!state.video) return;
-  const tracks = state.video.textTracks;
-  for (let i = 0; i < tracks.length; i++) {
-    const t = tracks[i];
-    if (!isSubtitleTrack(t)) continue;
-    if (ui.isExpanded) {
-      if (t.mode === "showing") {
-        (t as any)[NATIVE_OVERRIDDEN] = true;
-        try { t.mode = "hidden"; } catch { /* ignore */ }
-      }
-    } else if ((t as any)[NATIVE_OVERRIDDEN]) {
-      try { t.mode = "showing"; } catch { /* ignore */ }
-      delete (t as any)[NATIVE_OVERRIDDEN];
-    }
+  if (ui.isExpanded) {
+    setNativeCueHidden(true);
+  } else {
+    setNativeCueHidden(false);
+    restoreHiddenNativeDom();
   }
-  if (!ui.isExpanded) restoreHiddenNativeDom();
+}
+
+/** Remove all native-caption suppression (used when tearing the overlay down). */
+export function clearNativeSubtitleHiding(): void {
+  setNativeCueHidden(false);
+  restoreHiddenNativeDom();
 }

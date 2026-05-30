@@ -2,9 +2,14 @@
 //
 // Usage: npm run crx
 //
-// On first run, also generates build/key.pem (a 2048-bit RSA private key) —
+// On first run, also generates .crx-key/key.pem (a 2048-bit RSA private key) —
 // KEEP IT SAFE. Reusing the same key on every build keeps the extension's ID
 // stable, which is required for Chrome to recognise updates.
+//
+// The key lives in a dot-prefixed directory (NOT under build/) so that Chrome's
+// "Load unpacked" — which recursively scans the project folder — never sees it.
+// Chrome ignores files/folders whose names start with ".", and warns if a
+// private key file is found inside a loaded extension.
 
 import { mkdirSync, rmSync, copyFileSync, statSync, existsSync } from "node:fs";
 import { dirname, resolve } from "node:path";
@@ -15,7 +20,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = resolve(__dirname, "..");
 const buildDir = resolve(root, "build");
 const stagingDir = resolve(buildDir, "staging");
-const keyPath = resolve(buildDir, "key.pem");
+const keyPath = resolve(root, ".crx-key", "key.pem");
 const crxPath = resolve(buildDir, "nrk-subtitle-studio.crx");
 
 // Files referenced (directly or indirectly) by manifest.json. Anything listed
@@ -51,6 +56,7 @@ for (const rel of filesToInclude) {
 
 // 3) Pack.
 mkdirSync(buildDir, { recursive: true });
+mkdirSync(dirname(keyPath), { recursive: true });
 await crx3([stagingDir], { keyPath, crxPath });
 
 // 4) Clean up the staging dir; keep the .crx and the key.

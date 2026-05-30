@@ -19,7 +19,7 @@
 import { VIDEO_PAGE_RE } from "./config";
 import { state } from "./state";
 import { overlay, syncFullscreenParent } from "./overlay";
-import { restoreHiddenNativeDom } from "./native-subtitles";
+import { applyNativeSubtitleVisibility, clearNativeSubtitleHiding } from "./native-subtitles";
 import { stopTranslations } from "./translator";
 import { attachToVideo, detachVideo, findVideo, scanTextTracks } from "./video";
 
@@ -43,9 +43,10 @@ function bootstrap(): void {
       mounted = true;
       const v = findVideo();
       if (v) attachToVideo(v);
+      applyNativeSubtitleVisibility();
     } else if (!should && mounted) {
       // Leaving a video page → tear everything down.
-      restoreHiddenNativeDom();
+      clearNativeSubtitleHiding();
       overlay.parentElement?.removeChild(overlay);
       stopTranslations();
       detachVideo();

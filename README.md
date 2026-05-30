@@ -87,7 +87,14 @@ bugs, issues and suggestions.
 | `npm run clean` | Delete the `dist/` folder. |
 | `npm run rebuild` | `clean` + `build`. |
 | `npm run package` | Rebuild and produce `build/nrk-subtitle-studio.zip` ready to upload to the Chrome Web Store. |
-| `npm run crx` | Rebuild and produce `build/nrk-subtitle-studio.crx` (auto-creates `build/key.pem` on first run). |
+| `npm run crx` | Rebuild and produce `build/nrk-subtitle-studio.crx` (auto-creates the signing key at `.crx-key/key.pem` on first run). |
+
+> The `.crx` signing key lives in `.crx-key/` (git-ignored), **not** under
+> `build/`. It is kept in a dot-prefixed folder on purpose: Chrome's
+> **Load unpacked** recursively scans the project folder, and it warns if a
+> private key file is found inside the extension. Chrome ignores files and
+> folders whose names start with `.`, so the key never trips that warning.
+> Back this file up and reuse it for every build to keep a stable extension ID.
 
 ## Releasing to the Chrome Web Store
 
@@ -138,19 +145,32 @@ GitHub Actions will build, upload, and publish.
 ### Subtitle capture
 
 A content script finds the player's `<video>` element (works across NRK's SPA
-navigations) and listens for `addtrack` on `video.textTracks`. Whenever a
-subtitle track arrives, the script flips its `mode` to `'hidden'` so the
-browser parses every WebVTT cue into `track.cues` — without altering what's
-drawn on the video. While the panel is expanded, any track currently in
-`'showing'` mode is also flipped to `'hidden'` so NRK's native captions
-don't double up with our overlay; on **Hide** we restore the previous mode.
+navigations) and listens for `addtrack` on `video.textTracks`, plus `cuechange`
+on the subtitle track and a periodic re-scan. Whenever the cue set changes it is
+snapshotted into shared state.
 
-### DOM-rendered subtitle hider
+The script **never changes `track.mode`**. NRK's player streams subtitle
+segments only while its text track is visible, so forcing the track to
+`'hidden'` (an earlier approach) made the player stop loading cues — the overlay
+would freeze on the last cue while the video kept playing. Leaving the
+user-selected track untouched keeps cues flowing for the whole programme.
 
-NRK paints its on-video subtitle as a styled DOM node, not via the native
-`::cue` renderer. While the panel is expanded, the script walks the player
-container and `visibility:hidden`s any leaf-ish element whose visible text
-matches the current cue. Restored on collapse / cue change.
+Because the cue set is delivered (and evicted) in segments, the snapshot is
+guarded by a content *signature* (count + boundary timestamps), not just length,
+so it refreshes correctly even when cues are appended, replaced or rolled
+forward.
+
+### Hiding NRK's native captions
+
+Since `track.mode` is left alone, the native captions are suppressed *visually*
+instead, fully reversibly:
+
+- a `video::cue { … }` stylesheet covers the browser's native cue renderer, and
+- NRK paints its on-video subtitle as a styled DOM node (not via `::cue`), so the
+  script also walks the player container and `visibility:hidden`s any leaf-ish
+  element whose visible text matches the current cue.
+
+Both are removed when the panel collapses or you leave the video page.
 
 ### Rendering & rolling window
 

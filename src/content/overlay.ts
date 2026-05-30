@@ -68,11 +68,11 @@ overlay.innerHTML = `
     </span>
     <span class="nsr-group nsr-group-speed">
       <select class="nsr-sel" data-act="speed" title="Playback speed">
-        <option value="0.5">0.5×</option>
         <option value="0.6">0.6×</option>
         <option value="0.7">0.7×</option>
         <option value="0.8">0.8×</option>
         <option value="0.9">0.9×</option>
+        <option value="0.95">0.95×</option>
         <option value="1">1×</option>
         <option value="1.1">1.1×</option>
         <option value="1.25">1.25×</option>
@@ -93,10 +93,12 @@ overlay.innerHTML = `
     </span>
   </div>
   <div class="nsr-settings" hidden>
-    <div class="nsr-settings-title" data-i18n="settings_heading">Settings</div>
-    <label class="nsr-settings-row">
+    <div class="nsr-settings-title-row"><div class="nsr-settings-title" data-i18n="settings_heading">Settings</div><button class="nsr-settings-close" type="button" title="Close" aria-label="Close">×</button></div>
+    <label class="nsr-settings-row nsr-toggle-row">
       <span data-i18n="setting_enable_translation">Enable translation</span>
-      <input type="checkbox" data-act="set-translation" />
+      <button class="nsr-toggle" type="button" data-act="set-translation">
+        <span class="nsr-toggle-slider"></span>
+      </button>
     </label>
     <label class="nsr-settings-row">
       <span data-i18n="setting_ui_language">Menu language</span>
@@ -314,10 +316,20 @@ modeSel.addEventListener("change", () => {
 
 // ---------- Settings menu ----------
 const settingsBtn = overlay.querySelector('button[data-act="settings"]') as HTMLButtonElement;
-const translationToggle = overlay.querySelector('input[data-act="set-translation"]') as HTMLInputElement;
+const translationToggle = overlay.querySelector('button[data-act="set-translation"]') as HTMLButtonElement;
+function syncTranslationToggle() {
+  translationToggle.setAttribute("aria-checked", settings.translationEnabled ? "true" : "false");
+  translationToggle.classList.toggle("on", settings.translationEnabled);
+}
+syncTranslationToggle();
+window.addEventListener("nsr-translation-toggle", () => {
+  syncTranslationToggle();
+  syncTranslateGroupVisibility();
+  render();
+});
 const uiLangSel = overlay.querySelector('select[data-act="set-uilang"]') as HTMLSelectElement;
 
-translationToggle.checked = settings.translationEnabled;
+translationToggle.setAttribute("aria-checked", settings.translationEnabled ? "true" : "false");
 uiLangSel.value = getUiLang();
 
 function setSettingsOpen(open: boolean): void {
@@ -332,13 +344,22 @@ settingsBtn.addEventListener("click", (e) => {
 });
 // Keep clicks inside the panel from bubbling to the document-level close.
 settingsPanel.addEventListener("click", (e) => e.stopPropagation());
+
+// Settings close button
+const settingsCloseBtn = overlay.querySelector('.nsr-settings-close') as HTMLButtonElement;
+if (settingsCloseBtn) {
+  settingsCloseBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    setSettingsOpen(false);
+  });
+}
 // Close when clicking anywhere else.
 document.addEventListener("click", () => {
   if (isSettingsOpen()) setSettingsOpen(false);
 });
 
-translationToggle.addEventListener("change", () => {
-  setTranslationEnabled(translationToggle.checked);
+translationToggle.addEventListener("click", () => {
+  setTranslationEnabled(!settings.translationEnabled);
   syncTranslateGroupVisibility();
   updateStatus();
   onTranslationConfigChanged();

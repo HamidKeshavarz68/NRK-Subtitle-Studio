@@ -59,6 +59,11 @@ export function setDisplayMode(mode: DisplayMode): void {
 export function setTranslationEnabled(enabled: boolean): void {
   settings.translationEnabled = enabled;
   writeStorage(STORAGE_KEYS.translationEnabled, String(enabled));
+  // Notify overlay to update toggle and group visibility
+  if (typeof window !== "undefined") {
+    const event = new CustomEvent("nsr-translation-toggle");
+    window.dispatchEvent(event);
+  }
 }
 
 export function setFontSize(size: number): void {
