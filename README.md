@@ -1,0 +1,239 @@
+# NRK Subtitle Studio
+
+A Chrome (MV3) extension that supercharges the **tv.nrk.no** player with a side
+panel that:
+
+- shows **every subtitle cue** of the current video, scrolling in sync with
+  playback (past cues fade, the active line is highlighted, upcoming lines stay
+  visible so you can read ahead),
+- can **translate** the subtitles to any of ~20 languages via Google Translate
+  (Original / Translated / Bilingual modes),
+- lets you **click any line to seek** the video to that point,
+- adds a **playback-speed selector** (0.5× – 2×),
+- adjusts **font size** (A− / A+),
+- can be **resized from any edge or corner** and dragged anywhere on screen,
+- hides NRK's native on-video subtitle while the panel is open, and restores it
+  the moment you collapse the panel.
+
+## Table of contents
+
+- [Install (unpacked)](#install-unpacked)
+- [Toolbar controls](#toolbar-controls)
+- [Scripts](#scripts)
+- [Releasing to the Chrome Web Store](#releasing-to-the-chrome-web-store)
+- [How it works](#how-it-works)
+- [File layout](#file-layout)
+- [Notes & limitations](#notes--limitations)
+- [Roadmap](#roadmap)
+- [License](#license)
+
+## Install (unpacked)
+
+```powershell
+npm install
+npm run build
+```
+
+This compiles:
+
+- `src/content.ts`     → `dist/content.js`  (runs on the NRK page)
+- `src/background.ts`  → `dist/background.js` (service worker — proxies
+  Google Translate calls so the page CSP can't block them)
+
+Then:
+
+1. Open `chrome://extensions` and enable **Developer mode**.
+2. Click **Load unpacked** and select this project folder (the one
+   containing `manifest.json`).
+3. Open any video on <https://tv.nrk.no/>.
+4. **Turn subtitles on in the NRK player at least once** — pick any
+   language from the player's CC menu. NRK only downloads a subtitle file
+   when the user requests it; once you have, every cue is loaded and stays
+   available even if you turn the native subtitles back off.
+5. The panel appears in the top-right. Drag the header to move it. Drag any
+   edge or corner to resize. Click **Hide** to collapse to just the
+   toolbar; click **Show** to bring the list back.
+
+> The panel only mounts on actual video pages (URLs containing
+> `/episode/`, `/program/`, `/direkte/`, `/film/`, `/se/`). The main /
+> category pages of `tv.nrk.no` stay clean.
+
+## Toolbar controls
+
+| Control | What it does |
+| --- | --- |
+| **Language** | Target language for translation. "— No translation —" disables it. Hidden when mode is "Original". |
+| **Mode** | `Original` / `Translated` / `Bilingual`. Bilingual shows the original above and a smaller, blue, italic translation below. Hidden when language is off. |
+| **0.5× – 2×** | Sets `video.playbackRate` and re-asserts it if the player tries to reset. |
+| **A− / A+** | Cue font size (10 px – 32 px, persisted). |
+| **Hide / Show** | Collapses the window to just the toolbar, or restores its previous size. |
+
+## Scripts
+
+| Script | What it does |
+| --- | --- |
+| `npm run build` | Compile TypeScript → `dist/`. |
+| `npm run watch` | Same, in watch mode for development. |
+| `npm run clean` | Delete the `dist/` folder. |
+| `npm run rebuild` | `clean` + `build`. |
+| `npm run package` | Rebuild and produce `build/nrk-subtitle-studio.zip` ready to upload to the Chrome Web Store. |
+| `npm run crx` | Rebuild and produce `build/nrk-subtitle-studio.crx` (auto-creates `build/key.pem` on first run). |
+
+## Releasing to the Chrome Web Store
+
+The repository ships two GitHub Actions workflows under `.github/workflows/`:
+
+- **`ci.yml`** – runs on every push / PR; builds, sanity-checks the produced
+  files, and uploads a build artefact.
+- **`publish.yml`** – on every tag matching `v*` (e.g. `v1.0.1`), or via
+  manual *workflow_dispatch*, it:
+  1. verifies the tag matches `manifest.json`'s `version`,
+  2. builds + zips the extension,
+  3. uploads it to the Chrome Web Store via
+     [`chrome-webstore-upload-cli`](https://github.com/fregante/chrome-webstore-upload-cli)
+     and (for tag pushes) auto-publishes.
+
+### One-time setup
+
+1. Manually upload the first build (the zip from `npm run package`) to the
+   [Chrome Web Store dashboard](https://chrome.google.com/webstore/devconsole)
+   so Google assigns you an extension ID.
+2. In Google Cloud Console, enable the **Chrome Web Store API** and create
+   OAuth 2.0 credentials (type: *Desktop app*).
+3. Generate a refresh token:
+   ```powershell
+   npx chrome-webstore-upload-cli@3 generate-refresh-token
+   ```
+4. Add four repository secrets (Settings → Secrets and variables → Actions):
+
+   | Secret | Value |
+   | --- | --- |
+   | `CWS_EXTENSION_ID` | Extension ID from the developer dashboard |
+   | `CWS_CLIENT_ID` | OAuth 2.0 client ID |
+   | `CWS_CLIENT_SECRET` | OAuth 2.0 client secret |
+   | `CWS_REFRESH_TOKEN` | Refresh token from step 3 |
+
+### Cutting a release
+
+```powershell
+# bump version in package.json + manifest.json so they match, commit, then:
+git tag v1.0.1
+git push --tags
+```
+
+GitHub Actions will build, upload, and publish.
+
+## How it works
+
+### Subtitle capture
+
+A content script finds the player's `<video>` element (works across NRK's SPA
+navigations) and listens for `addtrack` on `video.textTracks`. Whenever a
+subtitle track arrives, the script flips its `mode` to `'hidden'` so the
+browser parses every WebVTT cue into `track.cues` — without altering what's
+drawn on the video. While the panel is expanded, any track currently in
+`'showing'` mode is also flipped to `'hidden'` so NRK's native captions
+don't double up with our overlay; on **Hide** we restore the previous mode.
+
+### DOM-rendered subtitle hider
+
+NRK paints its on-video subtitle as a styled DOM node, not via the native
+`::cue` renderer. While the panel is expanded, the script walks the player
+container and `visibility:hidden`s any leaf-ish element whose visible text
+matches the current cue. Restored on collapse / cue change.
+
+### Rendering & rolling window
+
+On every `timeupdate`, a binary search finds the active cue (most recent
+cue with `startTime ≤ currentTime`). The active cue stays highlighted
+through the silent gap until the **next** cue starts, so the current line
+never disappears between subtitles. A window of 3 past + 12 upcoming cues
+is re-rendered only when the window or translation states change, and the
+active line auto-scrolls to the centre.
+
+### Translation (Google Translate, batched)
+
+- The unauthenticated `translate.googleapis.com/translate_a/single?client=gtx`
+  endpoint is used (the same one Chrome's "Translate this page" calls — no
+  API key, but unofficial; rate-limited by IP).
+- The page's CSP blocks direct fetches from a content script, so all
+  translation requests are proxied through the **background service worker**
+  (`dist/background.js`).
+- Translation is **on-demand** — only the visible window (active cue + the
+  next ~12) is translated, not the whole episode. As playback advances new
+  cues stream in.
+- Requests are **coalesced into batches**: every render-triggered enqueue
+  joins a 30 ms collection window, and the resulting set is sent to Google
+  in **one HTTP request** (cues separated by a `@@@` token, then split back
+  apart). The active cue typically arrives in 200–400 ms with the rest of
+  the visible window, instead of N × 120 ms.
+- Per-pair LRU cache (`source|target|normalised text` → translation) so
+  repeats and seeks don't re-translate.
+- Falls back to per-cue requests if the separator gets mangled.
+
+### Resizing & dragging
+
+Eight invisible handles (4 edges + 4 corners) translate mouse drags into
+width/height/top/left changes, clamped to `[240×140, 95vw×95vh]` and to the
+viewport. Header dragging uses the same scheme. Position is not persisted
+across reloads, but **size is** (`localStorage.nsr.size`).
+
+### Persisted settings (localStorage)
+
+| Key | Value |
+| --- | --- |
+| `nsr.targetLang` | BCP-47 base code or `off` |
+| `nsr.displayMode` | `original` / `translated` / `bilingual` |
+| `nsr.fontSize` | px |
+| `nsr.size` | `{ "w": …, "h": … }` |
+| `nsr.playbackRate` | number 0.25 – 4 |
+
+## File layout
+
+```
+my-extension/
+├── manifest.json              MV3 manifest (content script + service worker)
+├── package.json
+├── tsconfig.json
+├── README.md
+├── CHANGELOG.md
+├── LICENSE
+├── public/
+│   └── icons/                 Toolbar / web-store icons (placeholder SVG)
+└── src/
+    ├── background/
+    │   └── index.ts           Service worker — Google Translate proxy
+    ├── content/
+    │   └── index.ts           Overlay UI, capture, translator, render
+    └── styles/
+        └── overlay.css        Overlay styles
+```
+
+Built with `npm run build` → `dist/content/index.js` and
+`dist/background/index.js`.
+
+## Notes & limitations
+
+- **NRK must have downloaded the subtitle file**: enable subtitles in the
+  NRK player at least once per video. After that, every cue is in memory.
+- **Live streams** that ship only in-band 608/708 captions don't expose
+  cues via `TextTrack.cues` and won't roll.
+- The Google Translate `gtx` endpoint is **unofficial**. If you start
+  seeing only ⚠ on cues, that's almost certainly a temporary 429 from
+  Google — wait a few minutes or pause translation by switching mode to
+  "Original".
+- The DOM-hiding heuristic for NRK's on-video subtitle is content-based
+  (it matches by text). If NRK ever changes their renderer markedly the
+  match may need tightening.
+
+## Roadmap
+
+- Optional cloud providers with API keys (DeepL, Google Cloud Translation
+  v3) for higher quality / quota guarantees.
+- Persistent translation cache per-program in `chrome.storage.local`.
+- Export current transcript (original + translation) as `.srt` / `.vtt`.
+
+## License
+
+[MIT](./LICENSE)
+

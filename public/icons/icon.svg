@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0a1f5f"/>
+      <stop offset="100%" stop-color="#051033"/>
+    </linearGradient>
+    <linearGradient id="blue" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#4fd3ff"/>
+      <stop offset="100%" stop-color="#2468ff"/>
+    </linearGradient>
+  </defs>
+
+  <rect x="30" y="30" width="964" height="964" rx="120" fill="url(#bg)"/>
+
+  <text x="512" y="210" text-anchor="middle"
+        font-family="Arial, Helvetica, sans-serif"
+        font-size="110" font-weight="700" fill="white">NRK TV</text>
+
+  <rect x="150" y="300" width="724" height="300" rx="60"
+        fill="none" stroke="url(#blue)" stroke-width="10"/>
+
+  <text x="512" y="500" text-anchor="middle"
+        font-family="Arial, Helvetica, sans-serif"
+        font-size="190" font-weight="700" fill="white">SUB</text>
+
+  <path d="M210 365 h20 M210 365 v20
+           M814 365 h-20 M814 365 v20
+           M210 535 h20 M210 535 v-20
+           M814 535 h-20 M814 535 v-20"
+        stroke="#39a6ff" stroke-width="10" fill="none" stroke-linecap="round"/>
+
+  <rect x="210" y="720" width="550" height="26" rx="13" fill="#edf2ff"/>
+  <rect x="210" y="805" width="430" height="26" rx="13" fill="#cddcff"/>
+  <rect x="210" y="890" width="300" height="26" rx="13" fill="#9ebcff"/>
+
+  <circle cx="850" cy="690" r="16" fill="#4f82ff"/>
+  <circle cx="850" cy="780" r="16" fill="#2f8fff"/>
+  <circle cx="850" cy="870" r="16" fill="#1db5ff"/>
+
+  <line x1="770" y1="800" x2="770" y2="930"
+        stroke="url(#blue)" stroke-width="28" stroke-linecap="round"/>
+  <path d="M770 960 L720 910 H748 L770 932 L792 910 H820 Z"
+        fill="url(#blue)"/>
+</svg>
