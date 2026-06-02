@@ -15,6 +15,7 @@ import { mkdirSync, rmSync, copyFileSync, statSync, existsSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import crx3 from "crx3";
+import { assertManifestCoversIncluded } from "./manifest-files.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = resolve(__dirname, "..");
@@ -38,6 +39,7 @@ const filesToInclude = [
 ];
 
 // 1) Verify the build artefacts exist.
+assertManifestCoversIncluded(filesToInclude);
 for (const rel of filesToInclude) {
   const abs = resolve(root, rel);
   if (!existsSync(abs)) {

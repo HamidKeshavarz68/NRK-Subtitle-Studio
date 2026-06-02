@@ -6,6 +6,7 @@ import { createWriteStream, existsSync, mkdirSync, statSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createRequire } from "node:module";
+import { assertManifestCoversIncluded } from "./manifest-files.mjs";
 const require = createRequire(import.meta.url);
 const { ZipArchive } = require("archiver");
 
@@ -24,6 +25,10 @@ const filesToInclude = [
   "public/icons/icon-48.png",
   "public/icons/icon-128.png",
 ];
+
+// Catch manifest <-> package drift before producing a zip the Web Store
+// will reject with "Invalid package".
+assertManifestCoversIncluded(filesToInclude);
 
 for (const rel of filesToInclude) {
   if (!existsSync(resolve(root, rel))) {
