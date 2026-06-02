@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "NRK Subtitle Studio",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Loads all subtitles from the NRK TV player and shows them in a scrolling, time-synced overlay while you watch.",
   "icons": {
     "128": "public/icons/icon.svg"
@@ -26,7 +26,7 @@
   ],
   "web_accessible_resources": [
     {
-      "resources": ["public/icons/icon.svg"],
+      "resources": ["public/icons/icon-128.png"],
       "matches": ["https://tv.nrk.no/*"]
     }
   ]

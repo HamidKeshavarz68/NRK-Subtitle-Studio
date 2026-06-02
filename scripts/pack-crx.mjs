@@ -31,7 +31,10 @@ const filesToInclude = [
   "dist/content/index.js",
   "dist/background/index.js",
   "src/styles/overlay.css",
-  "public/icons/icon.svg",
+  "public/icons/icon-16.png",
+  "public/icons/icon-32.png",
+  "public/icons/icon-48.png",
+  "public/icons/icon-128.png",
 ];
 
 // 1) Verify the build artefacts exist.

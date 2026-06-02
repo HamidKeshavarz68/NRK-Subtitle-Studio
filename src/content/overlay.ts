@@ -35,7 +35,7 @@ declare const chrome: any;
 
 const ICON_URL = (() => {
   try {
-    return chrome.runtime.getURL("public/icons/icon.svg");
+    return chrome.runtime.getURL("public/icons/icon-128.png");
   } catch {
     return "";
   }

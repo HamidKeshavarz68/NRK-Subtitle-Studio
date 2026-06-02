@@ -1,26 +1,17 @@
 # Icons
 
-`icon.svg` is a placeholder used by `manifest.json`.
+`icon.svg` is the source artwork. Chrome's manifest `icons` field does **not**
+accept SVG — uploading an SVG-only extension to the Chrome Web Store fails
+with `Could not decode image: 'icon.svg'`. We therefore ship PNGs at the
+standard sizes, and `manifest.json` references those PNGs.
 
-Chrome's manifest officially expects PNGs at common sizes. Before publishing
-to the Chrome Web Store, generate proper PNGs:
+The PNGs (`icon-16.png`, `icon-32.png`, `icon-48.png`, `icon-128.png`) are
+generated automatically from `icon.svg` by:
 
 ```powershell
-# example with ImageMagick
-magick public/icons/icon.svg -resize 16x16   public/icons/icon-16.png
-magick public/icons/icon.svg -resize 32x32   public/icons/icon-32.png
-magick public/icons/icon.svg -resize 48x48   public/icons/icon-48.png
-magick public/icons/icon.svg -resize 128x128 public/icons/icon-128.png
+npm run icons
 ```
 
-Then update `manifest.json`:
-
-```jsonc
-"icons": {
-  "16":  "public/icons/icon-16.png",
-  "32":  "public/icons/icon-32.png",
-  "48":  "public/icons/icon-48.png",
-  "128": "public/icons/icon-128.png"
-}
-```
+This step is also wired into `npm run build`, so normal build / package
+runs keep the PNGs in sync with the SVG.
 
