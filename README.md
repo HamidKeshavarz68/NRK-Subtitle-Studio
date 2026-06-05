@@ -1,5 +1,7 @@
 # NRK Subtitle Studio
 
+[**📦 Install from the Chrome Web Store →**](https://chromewebstore.google.com/detail/nrk-subtitle-studio/mcnkomopjmjaoamdpjmpokoboheekapf)
+
 A Chrome (MV3) extension that supercharges the **tv.nrk.no** player with a side
 panel that:
 
@@ -17,6 +19,7 @@ panel that:
 
 ## Table of contents
 
+- [Install from the Chrome Web Store](#install-from-the-chrome-web-store)
 - [Install (unpacked)](#install-unpacked)
 - [Toolbar controls](#toolbar-controls)
 - [Scripts](#scripts)
@@ -26,6 +29,21 @@ panel that:
 - [Notes & limitations](#notes--limitations)
 - [Roadmap](#roadmap)
 - [License](#license)
+
+## Install from the Chrome Web Store
+
+The easiest way to install NRK Subtitle Studio is straight from the
+[**Chrome Web Store listing**](https://chromewebstore.google.com/detail/nrk-subtitle-studio/mcnkomopjmjaoamdpjmpokoboheekapf):
+
+1. Open the listing and click **Add to Chrome**.
+2. Confirm the permissions prompt.
+3. Open any video on <https://tv.nrk.no/> and turn subtitles on in the NRK
+   player at least once (see step 4 under [Install (unpacked)](#install-unpacked)
+   for why).
+
+Chrome will keep the extension up to date automatically. If you'd rather build
+from source — to hack on it, audit the code, or pin a specific version — follow
+the unpacked install below.
 
 ## Install (unpacked)
 

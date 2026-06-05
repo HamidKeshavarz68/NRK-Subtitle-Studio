@@ -50,6 +50,8 @@ const VERSION = (() => {
 })();
 
 const REPO_URL = "https://github.com/HamidKeshavarz68/NRK-Subtitle-Studio";
+const WEBSTORE_URL =
+  "https://chromewebstore.google.com/detail/nrk-subtitle-studio/mcnkomopjmjaoamdpjmpokoboheekapf";
 const CONTACT_EMAIL = "hamidkeshavarz68@gmail.com";
 
 export const overlay = document.createElement("div");
@@ -112,6 +114,8 @@ overlay.innerHTML = `
         <a class="nsr-link" href="mailto:${CONTACT_EMAIL}" data-i18n="feedback_email">Email the author</a>
         <span class="nsr-dot">·</span>
         <a class="nsr-link" href="${REPO_URL}" target="_blank" rel="noopener noreferrer" data-i18n="feedback_repo">GitHub repository</a>
+        <span class="nsr-dot">·</span>
+        <a class="nsr-link" href="${WEBSTORE_URL}" target="_blank" rel="noopener noreferrer" data-i18n="feedback_webstore">Rate on Chrome Web Store</a>
       </div>
       <div class="nsr-settings-version">${VERSION ? `v${VERSION}` : ""}</div>
     </div>

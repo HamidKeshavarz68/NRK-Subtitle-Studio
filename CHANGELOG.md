@@ -6,6 +6,12 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- Link to the [Chrome Web Store listing](https://chromewebstore.google.com/detail/nrk-subtitle-studio/mcnkomopjmjaoamdpjmpokoboheekapf)
+  in the README and in the in-overlay Settings dropdown (Rate on Chrome Web
+  Store).
+
 ## [0.1.1]
 
 ### Added

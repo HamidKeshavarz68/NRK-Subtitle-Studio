@@ -34,7 +34,8 @@ export type MessageKey =
   | "setting_ui_language"
   | "feedback_intro"
   | "feedback_email"
-  | "feedback_repo";
+  | "feedback_repo"
+  | "feedback_webstore";
 
 type Messages = Record<MessageKey, string>;
 
@@ -66,6 +67,7 @@ const MESSAGES: Record<UiLang, Messages> = {
     feedback_intro: "Found a bug, issue or have a suggestion?",
     feedback_email: "Email the author",
     feedback_repo: "GitHub repository",
+    feedback_webstore: "Rate on Chrome Web Store",
   },
   no: {
     status_waiting: "venter…",
@@ -94,6 +96,7 @@ const MESSAGES: Record<UiLang, Messages> = {
     feedback_intro: "Funnet en feil eller har et forslag?",
     feedback_email: "Send e-post til utvikleren",
     feedback_repo: "GitHub-repositorium",
+    feedback_webstore: "Vurder i Chrome Nettmarked",
   },
 };
 
