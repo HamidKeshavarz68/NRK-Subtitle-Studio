@@ -141,6 +141,11 @@
 }
 #nrk-sub-roller .nsr-settings[hidden],
 #nrk-sub-roller .nsr-translate-panel[hidden] { display: none; }
+#nrk-sub-roller .nsr-translate-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
 #nrk-sub-roller .nsr-settings-title {
   font-weight: 600;
   font-size: 12px;
