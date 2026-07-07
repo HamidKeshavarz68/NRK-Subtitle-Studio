@@ -73,7 +73,7 @@ overlay.innerHTML = `
       <button class="nsr-btn" data-act="settings" title="Settings" aria-label="Settings">⚙</button>
     </span>
     <span class="nsr-group nsr-group-download" hidden>
-      <button class="nsr-btn nsr-btn-text" data-act="download" title="Download subtitles (.srt)" aria-label="Download subtitles">Download</button>
+      <button class="nsr-btn nsr-btn-text" data-act="download" title="Download subtitles (.srt)" aria-label="Download subtitles">Download subtitle</button>
     </span>
     <span class="nsr-group nsr-group-toggle">
       <button class="nsr-btn nsr-btn-text" data-act="toggle" title="Hide subtitle list">Hide</button>
