@@ -122,16 +122,16 @@ overlay.innerHTML = `
     <div class="nsr-settings-title-row"><div class="nsr-settings-title" data-i18n="translate_heading">Translation</div><button class="nsr-translate-close" type="button" title="Close" aria-label="Close">×</button></div>
     <div class="nsr-translate-rows">
       <label class="nsr-settings-row">
-        <span data-i18n="setting_target_lang">Translate to</span>
-        <select class="nsr-sel" data-act="lang" title="Translate to…"></select>
-      </label>
-      <label class="nsr-settings-row">
         <span data-i18n="setting_display_mode">Display mode</span>
         <select class="nsr-sel" data-act="mode" title="Display mode">
           <option value="original">Original</option>
           <option value="translated">Translated</option>
           <option value="bilingual">Bilingual</option>
         </select>
+      </label>
+      <label class="nsr-settings-row nsr-row-lang">
+        <span data-i18n="setting_target_lang">Translate to</span>
+        <select class="nsr-sel" data-act="lang" title="Translate to…"></select>
       </label>
     </div>
   </div>
@@ -312,6 +312,7 @@ overlay.querySelectorAll<HTMLElement>(".nsr-rh").forEach((handle) => {
 
 // ---------- Translation selects ----------
 const langSel = overlay.querySelector('select[data-act="lang"]') as HTMLSelectElement;
+const langRow = overlay.querySelector(".nsr-row-lang") as HTMLLabelElement;
 const modeSel = overlay.querySelector('select[data-act="mode"]') as HTMLSelectElement;
 langSel.innerHTML = LANGS.map((l) => `<option value="${l.code}">${l.name}</option>`).join("");
 langSel.value = settings.targetLang;
@@ -321,8 +322,9 @@ function syncModeSelVisibility(): void {
   modeSel.style.display = settings.targetLang === "off" ? "none" : "";
 }
 function syncLangSelVisibility(): void {
-  // No need to pick a target language if the user only wants the original.
-  langSel.style.display = settings.displayMode === "original" ? "none" : "";
+  // No need to pick a target language if the user only wants the original;
+  // hide the whole "Translate to" row in that case.
+  langRow.style.display = settings.displayMode === "original" ? "none" : "";
 }
 syncModeSelVisibility();
 syncLangSelVisibility();
