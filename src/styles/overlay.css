@@ -57,6 +57,11 @@
   flex-shrink: 0;
 }
 #nrk-sub-roller .nsr-group[hidden] { display: none; }
+/* Collapsed (Hide clicked): show only the logo, name and the Show button. */
+#nrk-sub-roller.nsr-collapsed .nsr-actions,
+#nrk-sub-roller.nsr-collapsed .nsr-status { display: none; }
+#nrk-sub-roller.nsr-collapsed .nsr-group-toggle { margin-left: auto; }
+
 /* Action toolbar: sits inline at wide widths, drops to its own full-width row
    at narrow widths (see container query below) so every control stays visible. */
 #nrk-sub-roller .nsr-actions {

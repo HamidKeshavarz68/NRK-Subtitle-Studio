@@ -495,6 +495,8 @@ function toggleExpanded(button: HTMLElement): void {
   bodyEl.style.display = collapsed ? "" : "none";
   const nowCollapsed = !collapsed;
   ui.isExpanded = !nowCollapsed;
+  // Collapsed = header shows only the logo, name and the Show button.
+  overlay.classList.toggle("nsr-collapsed", nowCollapsed);
 
   // Shrink to header-only when collapsed; restore previous height when expanded.
   if (nowCollapsed) {
