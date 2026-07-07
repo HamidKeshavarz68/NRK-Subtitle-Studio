@@ -70,21 +70,52 @@ function srtTime(seconds: number): string {
   return `${pad(h)}:${pad(m)}:${pad(s)},${pad(ms, 3)}`;
 }
 
-/** Serialise cues (with optional translations) to a SubRip (.srt) document. */
-function buildSrt(cues: RemoteCue[], translations: string[] | null): string {
+/** Normalise a BCP-47 tag to a short code, mapping Norwegian variants to `no`. */
+function langCode(raw: string): string {
+  const base = (raw || "").toLowerCase().split("-")[0];
+  if (base === "nb" || base === "nn" || base === "nob" || base === "nno" || base === "nor") {
+    return "no";
+  }
+  return base;
+}
+
+/** Prefix a text block with its language code, e.g. `no: ...` / `en: ...`. */
+function withLangLabel(code: string, text: string): string {
+  const body = text.replace(/\r?\n/g, "\n");
+  return code ? `${code}: ${body}` : body;
+}
+
+/**
+ * Serialise cues (with optional translations) to a SubRip-style document.
+ *
+ * Sequence numbers are intentionally omitted and each subtitle line is prefixed
+ * with its language code (source for the original, target for the translation).
+ */
+function buildSrt(
+  cues: RemoteCue[],
+  translations: string[] | null,
+  sourceLang: string,
+  targetLang: string
+): string {
   return (
     cues
       .map((c, i) => {
-        let body = c.text;
+        const timing = `${srtTime(c.start)} --> ${srtTime(c.end)}`;
+        let body: string;
         if (translations) {
           const tr = (translations[i] || "").trim();
           if (settings.displayMode === "translated") {
-            body = tr || c.text;
-          } else if (tr) {
-            body = `${c.text}\n${tr}`; // bilingual
+            body = tr ? withLangLabel(targetLang, tr) : withLangLabel(sourceLang, c.text);
+          } else {
+            // bilingual: original then translation
+            body =
+              withLangLabel(sourceLang, c.text) +
+              (tr ? `\n${withLangLabel(targetLang, tr)}` : "");
           }
+        } else {
+          body = withLangLabel(sourceLang, c.text);
         }
-        return `${i + 1}\n${srtTime(c.start)} --> ${srtTime(c.end)}\n${body.replace(/\r?\n/g, "\n")}`;
+        return `${timing}\n${body}`;
       })
       .join("\n\n") + "\n"
   );
@@ -131,12 +162,14 @@ export async function downloadSrt(): Promise<boolean> {
   if (!cues.length) return false;
 
   const lang = remote?.language || state.track?.language || "";
+  const sourceLang = langCode(lang || "no");
+  const targetLang = langCode(settings.targetLang);
 
   let translations: string[] | null = null;
   if (isTranslationActive()) {
     translations = await translateTexts(cues.map((c) => c.text));
   }
 
-  triggerDownload(buildSrt(cues, translations), fileName(lang));
+  triggerDownload(buildSrt(cues, translations, sourceLang, targetLang), fileName(sourceLang));
   return true;
 }
