@@ -61,17 +61,19 @@ overlay.innerHTML = `
   <div class="nsr-header">
     <span class="nsr-title">${ICON_URL ? `<img class="nsr-icon" src="${ICON_URL}" alt="" />` : "📜"} NRK Subtitle Studio</span>
     <span class="nsr-status">waiting…</span>
-    <span class="nsr-group nsr-group-translate">
-      <button class="nsr-btn nsr-btn-text" data-act="translate-menu" title="Translation" aria-label="Translation">Translation</button>
-    </span>
-    <span class="nsr-group nsr-group-download" hidden>
-      <button class="nsr-btn nsr-btn-text" data-act="download" title="Download subtitles (.srt)" aria-label="Download subtitles">Download subtitle</button>
-    </span>
-    <span class="nsr-group nsr-group-settings">
-      <button class="nsr-btn nsr-btn-text" data-act="settings" title="Settings" aria-label="Settings">Settings</button>
-    </span>
-    <span class="nsr-group nsr-group-toggle">
-      <button class="nsr-btn nsr-btn-text" data-act="toggle" title="Hide subtitle list">Hide</button>
+    <span class="nsr-actions">
+      <span class="nsr-group nsr-group-translate">
+        <button class="nsr-btn nsr-btn-text" data-act="translate-menu" title="Translation" aria-label="Translation">Translation</button>
+      </span>
+      <span class="nsr-group nsr-group-download" hidden>
+        <button class="nsr-btn nsr-btn-text" data-act="download" title="Download subtitles (.srt)" aria-label="Download subtitles">Download subtitle</button>
+      </span>
+      <span class="nsr-group nsr-group-settings">
+        <button class="nsr-btn nsr-btn-text" data-act="settings" title="Settings" aria-label="Settings">Settings</button>
+      </span>
+      <span class="nsr-group nsr-group-toggle">
+        <button class="nsr-btn nsr-btn-text" data-act="toggle" title="Hide subtitle list">Hide</button>
+      </span>
     </span>
   </div>
   <div class="nsr-settings" hidden>

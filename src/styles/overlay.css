@@ -46,7 +46,7 @@
   background: rgba(255, 255, 255, 0.06);
   cursor: move;
   user-select: none;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
   min-width: 0;
 }
 #nrk-sub-roller .nsr-group {
@@ -57,6 +57,15 @@
   flex-shrink: 0;
 }
 #nrk-sub-roller .nsr-group[hidden] { display: none; }
+/* Action toolbar: sits inline at wide widths, drops to its own full-width row
+   at narrow widths (see container query below) so every control stays visible. */
+#nrk-sub-roller .nsr-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+  margin-left: auto;
+}
 #nrk-sub-roller .nsr-title { font-weight: 600; font-size: 12px; display: inline-flex; align-items: center; gap: 6px; flex: 0 1 auto; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 #nrk-sub-roller .nsr-icon {
   width: 16px;
@@ -78,13 +87,17 @@
   text-overflow: ellipsis;
 }
 
-/* Keep the header on a single row as the panel narrows: drop the status text
-   first, then the title, so the action buttons never wrap to a second line. */
+/* Narrow panel: move the whole action toolbar onto a second full-width row and
+   let the buttons share the width equally, keeping the title, status and every
+   button visible without a jumbled wrap. */
 @container (max-width: 380px) {
-  #nrk-sub-roller .nsr-status { display: none; }
-}
-@container (max-width: 320px) {
-  #nrk-sub-roller .nsr-title { display: none; }
+  #nrk-sub-roller .nsr-actions {
+    flex: 1 0 100%;
+    margin-left: 0;
+    margin-top: 4px;
+  }
+  #nrk-sub-roller .nsr-actions .nsr-group { flex: 1 1 0; }
+  #nrk-sub-roller .nsr-actions .nsr-btn-text { width: 100%; }
 }
 #nrk-sub-roller .nsr-btn {
   background: transparent;
