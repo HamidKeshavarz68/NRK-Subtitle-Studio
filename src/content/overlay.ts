@@ -62,10 +62,10 @@ overlay.innerHTML = `
     <span class="nsr-title">${ICON_URL ? `<img class="nsr-icon" src="${ICON_URL}" alt="" />` : "📜"} NRK Subtitle Studio</span>
     <span class="nsr-status">waiting…</span>
     <span class="nsr-group nsr-group-translate">
-      <button class="nsr-btn" data-act="translate-menu" title="Translation" aria-label="Translation">🌐</button>
+      <button class="nsr-btn nsr-btn-text" data-act="translate-menu" title="Translation" aria-label="Translation">Translation</button>
     </span>
     <span class="nsr-group nsr-group-settings">
-      <button class="nsr-btn" data-act="settings" title="Settings" aria-label="Settings">⚙</button>
+      <button class="nsr-btn nsr-btn-text" data-act="settings" title="Settings" aria-label="Settings">Settings</button>
     </span>
     <span class="nsr-group nsr-group-download" hidden>
       <button class="nsr-btn nsr-btn-text" data-act="download" title="Download subtitles (.srt)" aria-label="Download subtitles">Download subtitle</button>
@@ -475,8 +475,10 @@ function applyI18n(): void {
   setTitle('button[data-act="font-up"]', t("font_larger"));
   settingsBtn.title = t("settings_open");
   settingsBtn.setAttribute("aria-label", t("settings_open"));
+  settingsBtn.textContent = t("settings_open");
   translateBtn.title = t("translate_open");
   translateBtn.setAttribute("aria-label", t("translate_open"));
+  translateBtn.textContent = t("translate_open");
   downloadBtn.title = t("download_title");
   downloadBtn.setAttribute("aria-label", t("download_title"));
   downloadBtn.textContent = t("download");
