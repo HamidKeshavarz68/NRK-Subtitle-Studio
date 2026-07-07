@@ -35,15 +35,13 @@ export interface Settings {
   displayMode: DisplayMode;
   fontSize: number;
   playbackRate: number;
-  translationEnabled: boolean;
 }
 
 export const settings: Settings = {
   targetLang: readStorage(STORAGE_KEYS.targetLang) || "off",
-  displayMode: (readStorage(STORAGE_KEYS.displayMode) as DisplayMode) || "bilingual",
+  displayMode: (readStorage(STORAGE_KEYS.displayMode) as DisplayMode) || "original",
   fontSize: clampFont(parseInt(readStorage(STORAGE_KEYS.fontSize) || "", 10) || FONT.default),
   playbackRate: clampSpeed(parseFloat(readStorage(STORAGE_KEYS.playbackRate) || "") || SPEED.default),
-  translationEnabled: readStorage(STORAGE_KEYS.translationEnabled) !== "false",
 };
 
 export function setTargetLang(lang: string): void {
@@ -56,16 +54,6 @@ export function setDisplayMode(mode: DisplayMode): void {
   writeStorage(STORAGE_KEYS.displayMode, mode);
 }
 
-export function setTranslationEnabled(enabled: boolean): void {
-  settings.translationEnabled = enabled;
-  writeStorage(STORAGE_KEYS.translationEnabled, String(enabled));
-  // Notify overlay to update toggle and group visibility
-  if (typeof window !== "undefined") {
-    const event = new CustomEvent("nsr-translation-toggle");
-    window.dispatchEvent(event);
-  }
-}
-
 export function setFontSize(size: number): void {
   settings.fontSize = clampFont(size);
   writeStorage(STORAGE_KEYS.fontSize, String(settings.fontSize));
@@ -73,7 +61,6 @@ export function setFontSize(size: number): void {
 
 /** True when translation output should be requested/shown at all. */
 export const isTranslationActive = (): boolean =>
-  settings.translationEnabled &&
   settings.targetLang !== "off" &&
   settings.displayMode !== "original";
 

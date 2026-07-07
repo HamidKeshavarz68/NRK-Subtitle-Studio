@@ -20,7 +20,6 @@ import {
   setFontSize,
   setPlaybackRate,
   setTargetLang,
-  setTranslationEnabled,
   settings,
   state,
   ui,
@@ -121,12 +120,6 @@ overlay.innerHTML = `
   </div>
   <div class="nsr-translate-panel" hidden>
     <div class="nsr-settings-title-row"><div class="nsr-settings-title" data-i18n="translate_heading">Translation</div><button class="nsr-translate-close" type="button" title="Close" aria-label="Close">×</button></div>
-    <label class="nsr-settings-row nsr-toggle-row">
-      <span data-i18n="setting_enable_translation">Enable translation</span>
-      <button class="nsr-toggle" type="button" data-act="set-translation">
-        <span class="nsr-toggle-slider"></span>
-      </button>
-    </label>
     <div class="nsr-translate-rows">
       <label class="nsr-settings-row">
         <span data-i18n="setting_target_lang">Translate to</span>
@@ -163,7 +156,6 @@ export const statusEl = overlay.querySelector(".nsr-status") as HTMLSpanElement;
 const bodyEl = overlay.querySelector(".nsr-body") as HTMLDivElement;
 const settingsPanel = overlay.querySelector(".nsr-settings") as HTMLDivElement;
 const translatePanel = overlay.querySelector(".nsr-translate-panel") as HTMLDivElement;
-const translateRows = overlay.querySelector(".nsr-translate-rows") as HTMLDivElement;
 
 // ---------- Fullscreen handling ----------
 // In fullscreen only the fullscreen element's subtree renders, so reparent the
@@ -332,13 +324,8 @@ function syncLangSelVisibility(): void {
   // No need to pick a target language if the user only wants the original.
   langSel.style.display = settings.displayMode === "original" ? "none" : "";
 }
-/** Hide the language/mode rows when translation is switched off. */
-function syncTranslateGroupVisibility(): void {
-  translateRows.style.display = settings.translationEnabled ? "" : "none";
-}
 syncModeSelVisibility();
 syncLangSelVisibility();
-syncTranslateGroupVisibility();
 
 langSel.addEventListener("change", () => {
   setTargetLang(langSel.value);
@@ -356,20 +343,8 @@ modeSel.addEventListener("change", () => {
 // ---------- Settings menu ----------
 const settingsBtn = overlay.querySelector('button[data-act="settings"]') as HTMLButtonElement;
 const translateBtn = overlay.querySelector('button[data-act="translate-menu"]') as HTMLButtonElement;
-const translationToggle = overlay.querySelector('button[data-act="set-translation"]') as HTMLButtonElement;
-function syncTranslationToggle() {
-  translationToggle.setAttribute("aria-checked", settings.translationEnabled ? "true" : "false");
-  translationToggle.classList.toggle("on", settings.translationEnabled);
-}
-syncTranslationToggle();
-window.addEventListener("nsr-translation-toggle", () => {
-  syncTranslationToggle();
-  syncTranslateGroupVisibility();
-  render();
-});
 const uiLangSel = overlay.querySelector('select[data-act="set-uilang"]') as HTMLSelectElement;
 
-translationToggle.setAttribute("aria-checked", settings.translationEnabled ? "true" : "false");
 uiLangSel.value = getUiLang();
 
 function setSettingsOpen(open: boolean): void {
@@ -420,12 +395,6 @@ document.addEventListener("click", () => {
   if (isTranslateOpen()) setTranslateOpen(false);
 });
 
-translationToggle.addEventListener("click", () => {
-  setTranslationEnabled(!settings.translationEnabled);
-  syncTranslateGroupVisibility();
-  updateStatus();
-  onTranslationConfigChanged();
-});
 uiLangSel.addEventListener("change", () => {
   setUiLang(uiLangSel.value as UiLang);
 });

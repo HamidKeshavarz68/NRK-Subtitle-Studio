@@ -39,7 +39,6 @@ export type MessageKey =
   | "download_title"
   | "setting_playback_speed"
   | "setting_font_size"
-  | "setting_enable_translation"
   | "setting_ui_language"
   | "feedback_intro"
   | "feedback_email"
@@ -80,7 +79,6 @@ const MESSAGES: Record<UiLang, Messages> = {
     download_title: "Download subtitles (.srt)",
     setting_playback_speed: "Playback speed",
     setting_font_size: "Text size",
-    setting_enable_translation: "Enable translation",
     setting_ui_language: "Menu language",
     feedback_intro: "Found a bug, issue or have a suggestion?",
     feedback_email: "Email the author",
@@ -118,7 +116,6 @@ const MESSAGES: Record<UiLang, Messages> = {
     download_title: "Last ned undertekster (.srt)",
     setting_playback_speed: "Avspillingshastighet",
     setting_font_size: "Tekststørrelse",
-    setting_enable_translation: "Aktiver oversettelse",
     setting_ui_language: "Menyspråk",
     feedback_intro: "Funnet en feil eller har et forslag?",
     feedback_email: "Send e-post til utvikleren",
