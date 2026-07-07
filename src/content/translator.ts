@@ -161,6 +161,85 @@ async function flushBatch(): Promise<void> {
   }
 }
 
+/**
+ * Translate an arbitrary list of texts (e.g. a whole subtitle file) using the
+ * current source/target settings. Reuses the shared cache, chunks requests to
+ * stay within the translate endpoint's GET URL limits, and paces them to avoid
+ * rate limiting. On a failed chunk the original text is returned for those
+ * items so the caller always gets a full-length result array.
+ */
+export async function translateTexts(texts: string[]): Promise<string[]> {
+  const source = detectSourceLang();
+  const target = settings.targetLang;
+  const out: string[] = texts.slice();
+
+  // Resolve from cache first; collect the rest into size-bounded chunks.
+  const MAX_CHARS = 1200;
+  const MAX_ITEMS = 80;
+  let chunk: number[] = [];
+  let chunkChars = 0;
+
+  const flush = async (indices: number[]): Promise<void> => {
+    if (!indices.length) return;
+    const lines = indices.map((i) => texts[i]);
+    const joined = lines.join(TRANSLATE.separator);
+    try {
+      const res = await googleTranslate(joined, source, target);
+      const parts = splitTranslated(res, indices.length);
+      if (parts.length === indices.length) {
+        indices.forEach((i, k) => {
+          const text = parts[k].trim();
+          out[i] = text;
+          const norm = normalizeWhitespace(texts[i]);
+          if (norm) cache.set(cacheKeyFor(source, target, norm), text);
+        });
+      } else {
+        // Separator lost: translate each item on its own.
+        for (let k = 0; k < indices.length; k++) {
+          const i = indices[k];
+          try {
+            const single = (await googleTranslate(texts[i], source, target)).trim();
+            out[i] = single;
+            const norm = normalizeWhitespace(texts[i]);
+            if (norm) cache.set(cacheKeyFor(source, target, norm), single);
+          } catch {
+            // keep original
+          }
+        }
+      }
+    } catch {
+      // keep originals for this chunk
+    }
+    // Gentle pacing between network calls.
+    await new Promise((r) => setTimeout(r, TRANSLATE.reqDelayMs));
+  };
+
+  for (let i = 0; i < texts.length; i++) {
+    const raw = texts[i] ?? "";
+    const norm = normalizeWhitespace(raw);
+    if (!norm) {
+      out[i] = "";
+      continue;
+    }
+    const cached = cache.get(cacheKeyFor(source, target, norm));
+    if (cached !== undefined) {
+      out[i] = cached;
+      continue;
+    }
+    const addChars = raw.length + TRANSLATE.separator.length;
+    if (chunk.length && (chunkChars + addChars > MAX_CHARS || chunk.length >= MAX_ITEMS)) {
+      await flush(chunk);
+      chunk = [];
+      chunkChars = 0;
+    }
+    chunk.push(i);
+    chunkChars += addChars;
+  }
+  await flush(chunk);
+
+  return out;
+}
+
 /** Abort in-flight work and drop per-cue results (cache is preserved). */
 export function stopTranslations(): void {
   requestId++;

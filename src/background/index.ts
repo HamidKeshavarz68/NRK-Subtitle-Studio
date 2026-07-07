@@ -16,8 +16,29 @@ type TranslateRequest = {
   target?: unknown;
 };
 
+type NrkFetchRequest = {
+  type: "nrk-fetch";
+  url?: unknown;
+};
+
 function isTranslateRequest(msg: unknown): msg is TranslateRequest {
   return !!msg && typeof msg === "object" && (msg as { type?: unknown }).type === "translate";
+}
+
+function isNrkFetchRequest(msg: unknown): msg is NrkFetchRequest {
+  return !!msg && typeof msg === "object" && (msg as { type?: unknown }).type === "nrk-fetch";
+}
+
+/** Only NRK-owned hosts may be proxied, to keep this a narrow, safe helper. */
+function isAllowedNrkUrl(raw: string): boolean {
+  try {
+    const u = new URL(raw);
+    if (u.protocol !== "https:") return false;
+    const host = u.hostname.toLowerCase();
+    return host === "nrk.no" || host.endsWith(".nrk.no");
+  } catch {
+    return false;
+  }
 }
 
 function buildTranslateUrl(source: string, target: string, text: string): string {
@@ -41,6 +62,24 @@ function extractTranslatedText(data: unknown): string {
 }
 
 chrome.runtime.onMessage.addListener((msg: unknown, _sender: unknown, sendResponse: (resp: any) => void) => {
+  if (isNrkFetchRequest(msg)) {
+    (async () => {
+      try {
+        const url = String(msg.url ?? "");
+        if (!isAllowedNrkUrl(url)) {
+          sendResponse({ ok: false, error: "url not allowed" });
+          return;
+        }
+        const res = await fetch(url, { method: "GET", credentials: "omit" });
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        sendResponse({ ok: true, text: await res.text() });
+      } catch (e: unknown) {
+        sendResponse({ ok: false, error: e instanceof Error ? e.message : String(e) });
+      }
+    })();
+    return true;
+  }
+
   if (!isTranslateRequest(msg)) return;
 
   (async () => {

@@ -377,8 +377,9 @@ uiLangSel.addEventListener("change", () => {
 });
 
 // ---------- Download subtitles (.srt) ----------
-// The button only appears once subtitles have actually been loaded into the
-// app; downloading serialises everything accumulated so far to a .srt file.
+// The button appears once subtitles are available. Clicking fetches the full
+// programme subtitles from NRK (translating them when translation is enabled)
+// and saves a .srt file; a busy state covers the async fetch/translate work.
 const downloadGroup = overlay.querySelector(".nsr-group-download") as HTMLSpanElement;
 const downloadBtn = overlay.querySelector('button[data-act="download"]') as HTMLButtonElement;
 export function syncDownloadButton(): void {
@@ -386,6 +387,25 @@ export function syncDownloadButton(): void {
 }
 syncDownloadButton();
 window.addEventListener("nsr-subtitles-updated", syncDownloadButton);
+
+let downloadBusy = false;
+async function handleDownload(): Promise<void> {
+  if (downloadBusy) return;
+  downloadBusy = true;
+  downloadBtn.disabled = true;
+  downloadBtn.classList.add("nsr-btn-busy");
+  downloadBtn.setAttribute("aria-busy", "true");
+  try {
+    await downloadSrt();
+  } catch (e) {
+    console.warn("[nsr] subtitle download failed", e);
+  } finally {
+    downloadBusy = false;
+    downloadBtn.disabled = false;
+    downloadBtn.classList.remove("nsr-btn-busy");
+    downloadBtn.removeAttribute("aria-busy");
+  }
+}
 
 // ---------- i18n: (re)apply all static UI strings ----------
 function applyI18n(): void {
@@ -476,7 +496,7 @@ overlay.addEventListener("click", (e) => {
       break;
     case "download":
       e.stopPropagation();
-      downloadSrt();
+      void handleDownload();
       break;
   }
 });

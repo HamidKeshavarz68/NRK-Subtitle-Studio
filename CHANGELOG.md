@@ -6,8 +6,16 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [0.2.0]
+
 ### Added
 
+- **Download subtitles** as a `.srt` (SubRip) file via a button in the overlay
+  header. The complete subtitle file for the whole programme is fetched from
+  NRK's playback manifest, so the export covers the entire video regardless of
+  how much has been played. When translation is enabled the whole file is
+  translated too, written as translated-only or bilingual output to match the
+  selected display mode. The button appears once subtitles are available.
 - Link to the [Chrome Web Store listing](https://chromewebstore.google.com/detail/nrk-subtitle-studio/mcnkomopjmjaoamdpjmpokoboheekapf)
   in the README and in the in-overlay Settings dropdown (Rate on Chrome Web
   Store).

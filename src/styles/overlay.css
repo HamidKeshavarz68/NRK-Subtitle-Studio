@@ -90,6 +90,11 @@
   justify-content: center;
 }
 #nrk-sub-roller .nsr-btn:hover { background: rgba(255, 255, 255, 0.12); }
+#nrk-sub-roller .nsr-btn-busy {
+  opacity: 0.55;
+  cursor: progress;
+  pointer-events: none;
+}
 #nrk-sub-roller .nsr-btn-text {
   min-width: 44px;
   font-size: 11px;

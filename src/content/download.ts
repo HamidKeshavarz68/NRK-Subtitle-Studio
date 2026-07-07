@@ -1,24 +1,26 @@
 /**
- * Subtitle accumulation and .srt export.
+ * Subtitle download and .srt export.
  *
- * The NRK player streams subtitles in segments and evicts cues that fall
- * outside its back-buffer, so `state.cues` is only ever a rolling window — never
- * the whole file. To offer a complete download we accumulate every cue we ever
- * see (keyed by start time) into a persistent map that survives eviction, then
- * serialise it to SubRip (.srt) on demand.
+ * Two problems are solved here:
+ *
+ *  1. Whole video. The NRK player only streams subtitle segments as they play
+ *     and evicts old ones, so the in-page cues never cover the full programme.
+ *     For downloads we therefore fetch the complete WebVTT file from NRK's
+ *     playback manifest (see remote-subtitles.ts). If that can't be resolved we
+ *     fall back to whatever cues have been accumulated from the player.
+ *
+ *  2. Translation. When translation is enabled the whole file is translated
+ *     through the same background proxy the overlay uses, and written into the
+ *     .srt as translated-only or bilingual output (matching the display mode).
  */
 
-import { state } from "./state";
+import { isTranslationActive, settings, state } from "./state";
 import { cueText } from "./utils";
+import { fetchFullSubtitles, RemoteCue } from "./remote-subtitles";
+import { translateTexts } from "./translator";
 
-interface AccumulatedCue {
-  start: number;
-  end: number;
-  text: string;
-}
-
-/** Every distinct cue seen so far for the current track, keyed by start time. */
-const accumulated = new Map<string, AccumulatedCue>();
+/** Every distinct cue seen so far from the player, keyed by start time. */
+const accumulated = new Map<string, RemoteCue>();
 
 /** Notify listeners (the overlay) that subtitle availability may have changed. */
 function notifyChanged(): void {
@@ -49,8 +51,12 @@ export function resetAccumulatedCues(): void {
   notifyChanged();
 }
 
-/** True once at least one subtitle line has been loaded. */
+/** True once at least one subtitle line is available. */
 export const hasSubtitles = (): boolean => accumulated.size > 0;
+
+function accumulatedSorted(): RemoteCue[] {
+  return Array.from(accumulated.values()).sort((a, b) => a.start - b.start);
+}
 
 /** Format seconds as SubRip timestamp `HH:MM:SS,mmm`. */
 function srtTime(seconds: number): string {
@@ -64,21 +70,28 @@ function srtTime(seconds: number): string {
   return `${pad(h)}:${pad(m)}:${pad(s)},${pad(ms, 3)}`;
 }
 
-/** Serialise the accumulated cues to a SubRip (.srt) document. */
-export function buildSrt(): string {
-  const items = Array.from(accumulated.values()).sort((a, b) => a.start - b.start);
+/** Serialise cues (with optional translations) to a SubRip (.srt) document. */
+function buildSrt(cues: RemoteCue[], translations: string[] | null): string {
   return (
-    items
+    cues
       .map((c, i) => {
-        const text = c.text.replace(/\r?\n/g, "\n");
-        return `${i + 1}\n${srtTime(c.start)} --> ${srtTime(c.end)}\n${text}`;
+        let body = c.text;
+        if (translations) {
+          const tr = (translations[i] || "").trim();
+          if (settings.displayMode === "translated") {
+            body = tr || c.text;
+          } else if (tr) {
+            body = `${c.text}\n${tr}`; // bilingual
+          }
+        }
+        return `${i + 1}\n${srtTime(c.start)} --> ${srtTime(c.end)}\n${body.replace(/\r?\n/g, "\n")}`;
       })
       .join("\n\n") + "\n"
   );
 }
 
 /** Best-effort, filesystem-safe file name derived from the page/track. */
-function fileName(): string {
+function fileName(lang: string): string {
   let base = "";
   try {
     base = (document.title || "").replace(/\s*[-–|]\s*NRK.*$/i, "").trim();
@@ -86,7 +99,6 @@ function fileName(): string {
     // ignore
   }
   if (!base) base = "nrk-subtitles";
-  const lang = state.track?.language || state.track?.label || "";
   const safe = `${base}${lang ? `.${lang}` : ""}`
     .replace(/[\\/:*?"<>|]+/g, "_")
     .replace(/\s+/g, " ")
@@ -95,17 +107,36 @@ function fileName(): string {
   return `${safe || "nrk-subtitles"}.srt`;
 }
 
-/** Build the .srt and trigger a browser download. */
-export function downloadSrt(): void {
-  if (!hasSubtitles()) return;
-  const blob = new Blob([buildSrt()], { type: "application/x-subrip;charset=utf-8" });
+function triggerDownload(content: string, name: string): void {
+  const blob = new Blob([content], { type: "application/x-subrip;charset=utf-8" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = fileName();
+  a.download = name;
   a.style.display = "none";
   (document.body || document.documentElement).appendChild(a);
   a.click();
   a.remove();
   self.setTimeout(() => URL.revokeObjectURL(url), 2000);
+}
+
+/**
+ * Build the .srt for the whole programme (translating if enabled) and trigger a
+ * browser download. Returns false if no subtitles could be produced.
+ */
+export async function downloadSrt(): Promise<boolean> {
+  // Prefer the complete manifest file; fall back to the accumulated player cues.
+  const remote = await fetchFullSubtitles();
+  const cues = remote?.cues.length ? remote.cues : accumulatedSorted();
+  if (!cues.length) return false;
+
+  const lang = remote?.language || state.track?.language || "";
+
+  let translations: string[] | null = null;
+  if (isTranslationActive()) {
+    translations = await translateTexts(cues.map((c) => c.text));
+  }
+
+  triggerDownload(buildSrt(cues, translations), fileName(lang));
+  return true;
 }
