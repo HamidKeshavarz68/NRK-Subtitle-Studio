@@ -70,9 +70,9 @@ overlay.innerHTML = `
       <span class="nsr-group nsr-group-settings">
         <button class="nsr-btn nsr-btn-text" data-act="settings" title="Settings" aria-label="Settings">Settings</button>
       </span>
-      <span class="nsr-group nsr-group-toggle">
-        <button class="nsr-btn nsr-btn-text" data-act="toggle" title="Hide subtitle list">Hide</button>
-      </span>
+    </span>
+    <span class="nsr-group nsr-group-toggle">
+      <button class="nsr-btn nsr-btn-text" data-act="toggle" title="Hide subtitle list">Hide</button>
     </span>
   </div>
   <div class="nsr-settings" hidden>

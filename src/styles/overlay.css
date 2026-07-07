@@ -64,7 +64,6 @@
   align-items: center;
   gap: 6px;
   flex: 0 0 auto;
-  margin-left: auto;
 }
 #nrk-sub-roller .nsr-title { font-weight: 600; font-size: 12px; display: inline-flex; align-items: center; gap: 6px; flex: 0 1 auto; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 #nrk-sub-roller .nsr-icon {
@@ -87,15 +86,16 @@
   text-overflow: ellipsis;
 }
 
-/* Narrow panel: move the whole action toolbar onto a second full-width row and
-   let the buttons share the width equally, keeping the title, status and every
-   button visible without a jumbled wrap. */
+/* Narrow panel: move the Translation/Download/Settings toolbar onto a second
+   full-width row (buttons sharing the width equally) while the Hide button stays
+   up on the first row beside the title and status. */
 @container (max-width: 380px) {
   #nrk-sub-roller .nsr-actions {
     flex: 1 0 100%;
-    margin-left: 0;
+    order: 2;
     margin-top: 4px;
   }
+  #nrk-sub-roller .nsr-group-toggle { order: 1; }
   #nrk-sub-roller .nsr-actions .nsr-group { flex: 1 1 0; }
   #nrk-sub-roller .nsr-actions .nsr-btn-text { width: 100%; }
 }
