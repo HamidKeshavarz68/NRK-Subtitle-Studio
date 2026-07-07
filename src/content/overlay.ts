@@ -77,6 +77,12 @@ overlay.innerHTML = `
   <div class="nsr-settings" hidden>
     <div class="nsr-settings-title-row"><div class="nsr-settings-title" data-i18n="settings_heading">Settings</div><button class="nsr-settings-close" type="button" title="Close" aria-label="Close">×</button></div>
     <label class="nsr-settings-row">
+      <span data-i18n="setting_ui_language">Menu language</span>
+      <select class="nsr-sel" data-act="set-uilang">
+        ${UI_LANGS.map((l) => `<option value="${l.code}">${l.name}</option>`).join("")}
+      </select>
+    </label>
+    <label class="nsr-settings-row">
       <span data-i18n="setting_playback_speed">Playback speed</span>
       <select class="nsr-sel" data-act="speed" title="Playback speed">
         <option value="0.6">0.6×</option>
@@ -99,12 +105,6 @@ overlay.innerHTML = `
         <button class="nsr-btn" data-act="font-up" title="Larger text">A+</button>
       </span>
     </div>
-    <label class="nsr-settings-row">
-      <span data-i18n="setting_ui_language">Menu language</span>
-      <select class="nsr-sel" data-act="set-uilang">
-        ${UI_LANGS.map((l) => `<option value="${l.code}">${l.name}</option>`).join("")}
-      </select>
-    </label>
     <div class="nsr-settings-foot">
       <div class="nsr-settings-feedback" data-i18n="feedback_intro">Found a bug or have a suggestion?</div>
       <div class="nsr-settings-links">
