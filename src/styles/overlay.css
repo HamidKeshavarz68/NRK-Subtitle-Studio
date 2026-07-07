@@ -21,6 +21,7 @@
   flex-direction: column;
   overflow: hidden;
   backdrop-filter: blur(6px);
+  container-type: inline-size;
 }
 
 /* Custom resize handles (4 edges + 4 corners) */
@@ -45,7 +46,8 @@
   background: rgba(255, 255, 255, 0.06);
   cursor: move;
   user-select: none;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  min-width: 0;
 }
 #nrk-sub-roller .nsr-group {
   display: inline-flex;
@@ -55,24 +57,34 @@
   flex-shrink: 0;
 }
 #nrk-sub-roller .nsr-group[hidden] { display: none; }
-#nrk-sub-roller .nsr-title { font-weight: 600; font-size: 12px; display: inline-flex; align-items: center; gap: 6px; }
+#nrk-sub-roller .nsr-title { font-weight: 600; font-size: 12px; display: inline-flex; align-items: center; gap: 6px; flex: 0 1 auto; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 #nrk-sub-roller .nsr-icon {
   width: 16px;
   height: 16px;
   display: inline-block;
   vertical-align: middle;
   border-radius: 3px;
+  flex-shrink: 0;
 }
 #nrk-sub-roller .nsr-status {
-  flex: 1;
+  flex: 1 1 auto;
   font-size: 10px;
   opacity: 0.7;
   text-align: right;
   margin-right: 2px;
-  min-width: 40px;
+  min-width: 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* Keep the header on a single row as the panel narrows: drop the status text
+   first, then the title, so the action buttons never wrap to a second line. */
+@container (max-width: 380px) {
+  #nrk-sub-roller .nsr-status { display: none; }
+}
+@container (max-width: 320px) {
+  #nrk-sub-roller .nsr-title { display: none; }
 }
 #nrk-sub-roller .nsr-btn {
   background: transparent;
