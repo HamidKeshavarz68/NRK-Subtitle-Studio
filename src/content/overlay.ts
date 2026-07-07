@@ -20,7 +20,6 @@ import {
   setFontSize,
   setPlaybackRate,
   setTargetLang,
-  setTranslationEnabled,
   settings,
   state,
   ui,
@@ -30,6 +29,7 @@ import { invalidateRender, render, updateStatus } from "./renderer";
 import { onTranslationConfigChanged } from "./translator";
 import { applyNativeSubtitleVisibility } from "./native-subtitles";
 import { getUiLang, onUiLangChange, setUiLang, t } from "./i18n";
+import { downloadSrt, hasSubtitles } from "./download";
 
 declare const chrome: any;
 
@@ -60,15 +60,31 @@ overlay.innerHTML = `
   <div class="nsr-header">
     <span class="nsr-title">${ICON_URL ? `<img class="nsr-icon" src="${ICON_URL}" alt="" />` : "📜"} NRK Subtitle Studio</span>
     <span class="nsr-status">waiting…</span>
-    <span class="nsr-group nsr-group-translate">
-      <select class="nsr-sel" data-act="lang" title="Translate to…"></select>
-      <select class="nsr-sel" data-act="mode" title="Display mode">
-        <option value="original">Original</option>
-        <option value="translated">Translated</option>
-        <option value="bilingual">Bilingual</option>
-      </select>
+    <span class="nsr-actions">
+      <span class="nsr-group nsr-group-translate">
+        <button class="nsr-btn nsr-btn-text" data-act="translate-menu" title="Translation" aria-label="Translation">Translation</button>
+      </span>
+      <span class="nsr-group nsr-group-download" hidden>
+        <button class="nsr-btn nsr-btn-text" data-act="download" title="Download subtitles (.srt)" aria-label="Download subtitles">Download subtitle</button>
+      </span>
+      <span class="nsr-group nsr-group-settings">
+        <button class="nsr-btn nsr-btn-text" data-act="settings" title="Settings" aria-label="Settings">Settings</button>
+      </span>
     </span>
-    <span class="nsr-group nsr-group-speed">
+    <span class="nsr-group nsr-group-toggle">
+      <button class="nsr-btn nsr-btn-text" data-act="toggle" title="Hide subtitle list">Hide</button>
+    </span>
+  </div>
+  <div class="nsr-settings" hidden>
+    <div class="nsr-settings-title-row"><div class="nsr-settings-title" data-i18n="settings_heading">Settings</div><button class="nsr-settings-close" type="button" title="Close" aria-label="Close">×</button></div>
+    <label class="nsr-settings-row">
+      <span data-i18n="setting_ui_language">Menu language</span>
+      <select class="nsr-sel" data-act="set-uilang">
+        ${UI_LANGS.map((l) => `<option value="${l.code}">${l.name}</option>`).join("")}
+      </select>
+    </label>
+    <label class="nsr-settings-row">
+      <span data-i18n="setting_playback_speed">Playback speed</span>
       <select class="nsr-sel" data-act="speed" title="Playback speed">
         <option value="0.6">0.6×</option>
         <option value="0.7">0.7×</option>
@@ -82,32 +98,14 @@ overlay.innerHTML = `
         <option value="1.75">1.75×</option>
         <option value="2">2×</option>
       </select>
-    </span>
-    <span class="nsr-group nsr-group-font">
-      <button class="nsr-btn" data-act="font-down" title="Smaller text">A−</button>
-      <button class="nsr-btn" data-act="font-up" title="Larger text">A+</button>
-    </span>
-    <span class="nsr-group nsr-group-settings">
-      <button class="nsr-btn" data-act="settings" title="Settings" aria-label="Settings">⚙</button>
-    </span>
-    <span class="nsr-group nsr-group-toggle">
-      <button class="nsr-btn nsr-btn-text" data-act="toggle" title="Hide subtitle list">Hide</button>
-    </span>
-  </div>
-  <div class="nsr-settings" hidden>
-    <div class="nsr-settings-title-row"><div class="nsr-settings-title" data-i18n="settings_heading">Settings</div><button class="nsr-settings-close" type="button" title="Close" aria-label="Close">×</button></div>
-    <label class="nsr-settings-row nsr-toggle-row">
-      <span data-i18n="setting_enable_translation">Enable translation</span>
-      <button class="nsr-toggle" type="button" data-act="set-translation">
-        <span class="nsr-toggle-slider"></span>
-      </button>
     </label>
-    <label class="nsr-settings-row">
-      <span data-i18n="setting_ui_language">Menu language</span>
-      <select class="nsr-sel" data-act="set-uilang">
-        ${UI_LANGS.map((l) => `<option value="${l.code}">${l.name}</option>`).join("")}
-      </select>
-    </label>
+    <div class="nsr-settings-row">
+      <span data-i18n="setting_font_size">Text size</span>
+      <span class="nsr-group nsr-group-font">
+        <button class="nsr-btn" data-act="font-down" title="Smaller text">A−</button>
+        <button class="nsr-btn" data-act="font-up" title="Larger text">A+</button>
+      </span>
+    </div>
     <div class="nsr-settings-foot">
       <div class="nsr-settings-feedback" data-i18n="feedback_intro">Found a bug or have a suggestion?</div>
       <div class="nsr-settings-links">
@@ -118,6 +116,23 @@ overlay.innerHTML = `
         <a class="nsr-link" href="${WEBSTORE_URL}" target="_blank" rel="noopener noreferrer" data-i18n="feedback_webstore">Rate on Chrome Web Store</a>
       </div>
       <div class="nsr-settings-version">${VERSION ? `v${VERSION}` : ""}</div>
+    </div>
+  </div>
+  <div class="nsr-translate-panel" hidden>
+    <div class="nsr-settings-title-row"><div class="nsr-settings-title" data-i18n="translate_heading">Translation</div><button class="nsr-translate-close" type="button" title="Close" aria-label="Close">×</button></div>
+    <div class="nsr-translate-rows">
+      <label class="nsr-settings-row">
+        <span data-i18n="setting_display_mode">Display mode</span>
+        <select class="nsr-sel" data-act="mode" title="Display mode">
+          <option value="original">Original</option>
+          <option value="translated">Translated</option>
+          <option value="bilingual">Bilingual</option>
+        </select>
+      </label>
+      <label class="nsr-settings-row nsr-row-lang">
+        <span data-i18n="setting_target_lang">Translate to</span>
+        <select class="nsr-sel" data-act="lang" title="Translate to…"></select>
+      </label>
     </div>
   </div>
   <div class="nsr-body">
@@ -140,7 +155,7 @@ export const listEl = overlay.querySelector(".nsr-list") as HTMLDivElement;
 export const statusEl = overlay.querySelector(".nsr-status") as HTMLSpanElement;
 const bodyEl = overlay.querySelector(".nsr-body") as HTMLDivElement;
 const settingsPanel = overlay.querySelector(".nsr-settings") as HTMLDivElement;
-const translateGroup = overlay.querySelector(".nsr-group-translate") as HTMLSpanElement;
+const translatePanel = overlay.querySelector(".nsr-translate-panel") as HTMLDivElement;
 
 // ---------- Fullscreen handling ----------
 // In fullscreen only the fullscreen element's subtree renders, so reparent the
@@ -163,6 +178,18 @@ function renderFontSize(): void {
   overlay.style.setProperty("--nsr-cue-size", settings.fontSize + "px");
 }
 renderFontSize();
+
+// Font buttons live inside the settings panel, whose click handler stops
+// propagation, so they need direct listeners rather than the overlay-level
+// delegated handler used by the header buttons.
+overlay.querySelector('button[data-act="font-up"]')?.addEventListener("click", () => {
+  setFontSize(settings.fontSize + FONT.step);
+  renderFontSize();
+});
+overlay.querySelector('button[data-act="font-down"]')?.addEventListener("click", () => {
+  setFontSize(settings.fontSize - FONT.step);
+  renderFontSize();
+});
 
 // ---------- Window size (persisted) ----------
 // Only apply saved size if it meets a reasonable minimum; otherwise let the
@@ -285,6 +312,7 @@ overlay.querySelectorAll<HTMLElement>(".nsr-rh").forEach((handle) => {
 
 // ---------- Translation selects ----------
 const langSel = overlay.querySelector('select[data-act="lang"]') as HTMLSelectElement;
+const langRow = overlay.querySelector(".nsr-row-lang") as HTMLLabelElement;
 const modeSel = overlay.querySelector('select[data-act="mode"]') as HTMLSelectElement;
 langSel.innerHTML = LANGS.map((l) => `<option value="${l.code}">${l.name}</option>`).join("");
 langSel.value = settings.targetLang;
@@ -294,16 +322,12 @@ function syncModeSelVisibility(): void {
   modeSel.style.display = settings.targetLang === "off" ? "none" : "";
 }
 function syncLangSelVisibility(): void {
-  // No need to pick a target language if the user only wants the original.
-  langSel.style.display = settings.displayMode === "original" ? "none" : "";
-}
-/** Hide the whole translate group when the feature is switched off. */
-function syncTranslateGroupVisibility(): void {
-  translateGroup.style.display = settings.translationEnabled ? "" : "none";
+  // No need to pick a target language if the user only wants the original;
+  // hide the whole "Translate to" row in that case.
+  langRow.style.display = settings.displayMode === "original" ? "none" : "";
 }
 syncModeSelVisibility();
 syncLangSelVisibility();
-syncTranslateGroupVisibility();
 
 langSel.addEventListener("change", () => {
   setTargetLang(langSel.value);
@@ -320,34 +344,36 @@ modeSel.addEventListener("change", () => {
 
 // ---------- Settings menu ----------
 const settingsBtn = overlay.querySelector('button[data-act="settings"]') as HTMLButtonElement;
-const translationToggle = overlay.querySelector('button[data-act="set-translation"]') as HTMLButtonElement;
-function syncTranslationToggle() {
-  translationToggle.setAttribute("aria-checked", settings.translationEnabled ? "true" : "false");
-  translationToggle.classList.toggle("on", settings.translationEnabled);
-}
-syncTranslationToggle();
-window.addEventListener("nsr-translation-toggle", () => {
-  syncTranslationToggle();
-  syncTranslateGroupVisibility();
-  render();
-});
+const translateBtn = overlay.querySelector('button[data-act="translate-menu"]') as HTMLButtonElement;
 const uiLangSel = overlay.querySelector('select[data-act="set-uilang"]') as HTMLSelectElement;
 
-translationToggle.setAttribute("aria-checked", settings.translationEnabled ? "true" : "false");
 uiLangSel.value = getUiLang();
 
 function setSettingsOpen(open: boolean): void {
+  if (open) setTranslateOpen(false);
   settingsPanel.hidden = !open;
   settingsBtn.classList.toggle("nsr-btn-active", open);
 }
 const isSettingsOpen = (): boolean => !settingsPanel.hidden;
 
+function setTranslateOpen(open: boolean): void {
+  if (open) setSettingsOpen(false);
+  translatePanel.hidden = !open;
+  translateBtn.classList.toggle("nsr-btn-active", open);
+}
+const isTranslateOpen = (): boolean => !translatePanel.hidden;
+
 settingsBtn.addEventListener("click", (e) => {
   e.stopPropagation();
   setSettingsOpen(settingsPanel.hidden);
 });
-// Keep clicks inside the panel from bubbling to the document-level close.
+translateBtn.addEventListener("click", (e) => {
+  e.stopPropagation();
+  setTranslateOpen(translatePanel.hidden);
+});
+// Keep clicks inside the panels from bubbling to the document-level close.
 settingsPanel.addEventListener("click", (e) => e.stopPropagation());
+translatePanel.addEventListener("click", (e) => e.stopPropagation());
 
 // Settings close button
 const settingsCloseBtn = overlay.querySelector('.nsr-settings-close') as HTMLButtonElement;
@@ -357,20 +383,56 @@ if (settingsCloseBtn) {
     setSettingsOpen(false);
   });
 }
+// Translation panel close button
+const translateCloseBtn = overlay.querySelector('.nsr-translate-close') as HTMLButtonElement;
+if (translateCloseBtn) {
+  translateCloseBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    setTranslateOpen(false);
+  });
+}
 // Close when clicking anywhere else.
 document.addEventListener("click", () => {
   if (isSettingsOpen()) setSettingsOpen(false);
+  if (isTranslateOpen()) setTranslateOpen(false);
 });
 
-translationToggle.addEventListener("click", () => {
-  setTranslationEnabled(!settings.translationEnabled);
-  syncTranslateGroupVisibility();
-  updateStatus();
-  onTranslationConfigChanged();
-});
 uiLangSel.addEventListener("change", () => {
   setUiLang(uiLangSel.value as UiLang);
 });
+
+// ---------- Download subtitles (.srt) ----------
+// The button appears once subtitles are available. Clicking fetches the full
+// programme subtitles from NRK (translating them when translation is enabled)
+// and saves a .srt file; a busy state covers the async fetch/translate work.
+const downloadGroup = overlay.querySelector(".nsr-group-download") as HTMLSpanElement;
+const downloadBtn = overlay.querySelector('button[data-act="download"]') as HTMLButtonElement;
+export function syncDownloadButton(): void {
+  downloadGroup.hidden = !hasSubtitles();
+}
+syncDownloadButton();
+window.addEventListener("nsr-subtitles-updated", syncDownloadButton);
+
+let downloadBusy = false;
+async function handleDownload(): Promise<void> {
+  if (downloadBusy) return;
+  downloadBusy = true;
+  downloadBtn.disabled = true;
+  downloadBtn.classList.add("nsr-btn-busy");
+  downloadBtn.setAttribute("aria-busy", "true");
+  downloadBtn.textContent = t("download_busy");
+  try {
+    await downloadSrt();
+  } catch (e) {
+    console.warn("[nsr] subtitle download failed", e);
+  } finally {
+    downloadBusy = false;
+    downloadBtn.disabled = false;
+    downloadBtn.classList.remove("nsr-btn-busy");
+    downloadBtn.removeAttribute("aria-busy");
+    downloadBtn.textContent = t("download");
+  }
+}
 
 // ---------- i18n: (re)apply all static UI strings ----------
 function applyI18n(): void {
@@ -386,6 +448,13 @@ function applyI18n(): void {
   setTitle('button[data-act="font-up"]', t("font_larger"));
   settingsBtn.title = t("settings_open");
   settingsBtn.setAttribute("aria-label", t("settings_open"));
+  settingsBtn.textContent = t("settings_open");
+  translateBtn.title = t("translate_open");
+  translateBtn.setAttribute("aria-label", t("translate_open"));
+  translateBtn.textContent = t("translate_open");
+  downloadBtn.title = t("download_title");
+  downloadBtn.setAttribute("aria-label", t("download_title"));
+  downloadBtn.textContent = t("download");
 
   // Collapse/expand button reflects current state.
   toggleBtn.textContent = ui.isExpanded ? t("hide") : t("show");
@@ -426,6 +495,8 @@ function toggleExpanded(button: HTMLElement): void {
   bodyEl.style.display = collapsed ? "" : "none";
   const nowCollapsed = !collapsed;
   ui.isExpanded = !nowCollapsed;
+  // Collapsed = header shows only the logo, name and the Show button.
+  overlay.classList.toggle("nsr-collapsed", nowCollapsed);
 
   // Shrink to header-only when collapsed; restore previous height when expanded.
   if (nowCollapsed) {
@@ -449,13 +520,9 @@ overlay.addEventListener("click", (e) => {
     case "toggle":
       toggleExpanded(target);
       break;
-    case "font-up":
-      setFontSize(settings.fontSize + FONT.step);
-      renderFontSize();
-      break;
-    case "font-down":
-      setFontSize(settings.fontSize - FONT.step);
-      renderFontSize();
+    case "download":
+      e.stopPropagation();
+      void handleDownload();
       break;
   }
 });

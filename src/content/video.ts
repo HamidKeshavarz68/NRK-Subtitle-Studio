@@ -11,6 +11,7 @@ import { applyPlaybackRate, settings, state } from "./state";
 import { isSubtitleTrack } from "./utils";
 import { render, setStatus, updateStatus, invalidateRender } from "./renderer";
 import { onTranslationConfigChanged, stopTranslations } from "./translator";
+import { accumulateCues, resetAccumulatedCues } from "./download";
 
 /** Marker so each track is hooked for cue updates only once. */
 const HOOKED = "__nsrHooked";
@@ -53,6 +54,7 @@ export function attachToVideo(video: HTMLVideoElement): void {
   state.track = null;
   lastCueSig = "";
   lastFirstStart = -1;
+  resetAccumulatedCues();
   setStatus("video found");
 
   const refresh = () => scanTextTracks(video);
@@ -154,7 +156,9 @@ function snapshotCues(track: TextTrack): void {
   state.cues = cues;
   updateStatus();
   if (trackChanged) {
-    // New source language → translations from the old track no longer apply.
+    // New track (e.g. a different subtitle language) → the accumulated set and
+    // translations from the old track no longer apply.
+    resetAccumulatedCues();
     onTranslationConfigChanged();
   } else if (cues.length && cues[0].startTime !== lastFirstStart) {
     // Front of the list moved (cues evicted): index→translation mappings are
@@ -163,6 +167,8 @@ function snapshotCues(track: TextTrack): void {
     stopTranslations();
   }
   lastFirstStart = cues.length ? cues[0].startTime : -1;
+  // Keep the complete-download accumulator in sync with the latest snapshot.
+  accumulateCues(cues);
   // Indices into state.cues may now map to different cues, so the renderer's
   // index-based cache must be discarded.
   invalidateRender();

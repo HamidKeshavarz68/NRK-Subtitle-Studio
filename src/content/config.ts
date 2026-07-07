@@ -23,7 +23,6 @@ export const STORAGE_KEYS = {
   playbackRate: "nsr.playbackRate",
   targetLang: "nsr.targetLang",
   displayMode: "nsr.displayMode",
-  translationEnabled: "nsr.translationEnabled",
   uiLang: "nsr.uiLang",
 } as const;
 

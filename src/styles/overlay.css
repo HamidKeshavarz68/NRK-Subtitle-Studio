@@ -21,6 +21,7 @@
   flex-direction: column;
   overflow: hidden;
   backdrop-filter: blur(6px);
+  container-type: inline-size;
 }
 
 /* Custom resize handles (4 edges + 4 corners) */
@@ -46,6 +47,7 @@
   cursor: move;
   user-select: none;
   flex-wrap: wrap;
+  min-width: 0;
 }
 #nrk-sub-roller .nsr-group {
   display: inline-flex;
@@ -54,24 +56,53 @@
   flex-wrap: nowrap;       /* keep grouped controls together */
   flex-shrink: 0;
 }
-#nrk-sub-roller .nsr-title { font-weight: 600; font-size: 12px; display: inline-flex; align-items: center; gap: 6px; }
+#nrk-sub-roller .nsr-group[hidden] { display: none; }
+/* Collapsed (Hide clicked): show only the logo, name and the Show button. */
+#nrk-sub-roller.nsr-collapsed .nsr-actions,
+#nrk-sub-roller.nsr-collapsed .nsr-status { display: none; }
+#nrk-sub-roller.nsr-collapsed .nsr-group-toggle { margin-left: auto; }
+
+/* Action toolbar: sits inline at wide widths, drops to its own full-width row
+   at narrow widths (see container query below) so every control stays visible. */
+#nrk-sub-roller .nsr-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+}
+#nrk-sub-roller .nsr-title { font-weight: 600; font-size: 12px; display: inline-flex; align-items: center; gap: 6px; flex: 0 1 auto; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 #nrk-sub-roller .nsr-icon {
   width: 16px;
   height: 16px;
   display: inline-block;
   vertical-align: middle;
   border-radius: 3px;
+  flex-shrink: 0;
 }
 #nrk-sub-roller .nsr-status {
-  flex: 1;
+  flex: 1 1 auto;
   font-size: 10px;
   opacity: 0.7;
   text-align: right;
   margin-right: 2px;
-  min-width: 40px;
+  min-width: 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* Narrow panel: move the Translation/Download/Settings toolbar onto a second
+   full-width row (buttons sharing the width equally) while the Hide button stays
+   up on the first row beside the title and status. */
+@container (max-width: 380px) {
+  #nrk-sub-roller .nsr-actions {
+    flex: 1 0 100%;
+    order: 2;
+    margin-top: 4px;
+  }
+  #nrk-sub-roller .nsr-group-toggle { order: 1; }
+  #nrk-sub-roller .nsr-actions .nsr-group { flex: 1 1 0; }
+  #nrk-sub-roller .nsr-actions .nsr-btn-text { width: 100%; }
 }
 #nrk-sub-roller .nsr-btn {
   background: transparent;
@@ -89,10 +120,16 @@
   justify-content: center;
 }
 #nrk-sub-roller .nsr-btn:hover { background: rgba(255, 255, 255, 0.12); }
+#nrk-sub-roller .nsr-btn-busy {
+  opacity: 0.55;
+  cursor: progress;
+  pointer-events: none;
+}
 #nrk-sub-roller .nsr-btn-text {
   min-width: 44px;
   font-size: 11px;
   font-weight: 500;
+  white-space: nowrap;
 }
 
 #nrk-sub-roller .nsr-sel {
@@ -116,7 +153,8 @@
   border-color: rgba(255, 255, 255, 0.4);
 }
 
-#nrk-sub-roller .nsr-settings {
+#nrk-sub-roller .nsr-settings,
+#nrk-sub-roller .nsr-translate-panel {
   position: absolute;
   top: 40px;
   right: 8px;
@@ -131,7 +169,13 @@
   flex-direction: column;
   gap: 10px;
 }
-#nrk-sub-roller .nsr-settings[hidden] { display: none; }
+#nrk-sub-roller .nsr-settings[hidden],
+#nrk-sub-roller .nsr-translate-panel[hidden] { display: none; }
+#nrk-sub-roller .nsr-translate-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
 #nrk-sub-roller .nsr-settings-title {
   font-weight: 600;
   font-size: 12px;
@@ -152,6 +196,7 @@
   gap: 10px;
 }
 #nrk-sub-roller .nsr-toggle {
+  box-sizing: border-box;
   width: 38px;
   height: 22px;
   background: #222;
@@ -169,11 +214,13 @@
   border-color: #6cb4ff;
 }
 #nrk-sub-roller .nsr-toggle-slider {
+  box-sizing: border-box;
   position: absolute;
-  top: 2px;
-  left: 2px;
-  width: 18px;
-  height: 18px;
+  top: 50%;
+  left: 1px;
+  width: 16px;
+  height: 16px;
+  transform: translateY(-50%);
   background: #fff;
   border-radius: 50%;
   box-shadow: 0 1px 4px rgba(0,0,0,0.18);
@@ -193,7 +240,8 @@
   font-weight: bold;
   font-size: 1.1em;
 }
-#nrk-sub-roller .nsr-settings-close {
+#nrk-sub-roller .nsr-settings-close,
+#nrk-sub-roller .nsr-translate-close {
   background: none;
   border: none;
   color: #fff;
@@ -204,7 +252,9 @@
   transition: background 0.15s;
 }
 #nrk-sub-roller .nsr-settings-close:hover,
-#nrk-sub-roller .nsr-settings-close:focus {
+#nrk-sub-roller .nsr-settings-close:focus,
+#nrk-sub-roller .nsr-translate-close:hover,
+#nrk-sub-roller .nsr-translate-close:focus {
   background: rgba(255,255,255,0.12);
 }
 #nrk-sub-roller .nsr-settings-foot {

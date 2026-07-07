@@ -6,8 +6,29 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Changed
+
+- **Translation controls moved into a dedicated menu.** A new Translation menu
+  button in the overlay header opens a panel that groups the Translate to
+  language picker and the Display mode selector, mirroring the Settings menu.
+  This declutters the header and keeps all translation options in one place.
+- **New users now start on the original subtitles.** The default display mode is
+  now "Original" instead of bilingual, so translation only happens once the user
+  explicitly chooses a translated or bilingual mode.
+- Removed the separate "Enable translation" toggle. Translation is now driven
+  entirely by the Display mode and target language, so there is no redundant
+  master switch to keep in sync.
+
+## [0.2.0]
+
 ### Added
 
+- **Download subtitles** as a `.srt` (SubRip) file via a button in the overlay
+  header. The complete subtitle file for the whole programme is fetched from
+  NRK's playback manifest, so the export covers the entire video regardless of
+  how much has been played. When translation is enabled the whole file is
+  translated too, written as translated-only or bilingual output to match the
+  selected display mode. The button appears once subtitles are available.
 - Link to the [Chrome Web Store listing](https://chromewebstore.google.com/detail/nrk-subtitle-studio/mcnkomopjmjaoamdpjmpokoboheekapf)
   in the README and in the in-overlay Settings dropdown (Rate on Chrome Web
   Store).
