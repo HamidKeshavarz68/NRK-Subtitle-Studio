@@ -69,30 +69,11 @@ overlay.innerHTML = `
         <option value="bilingual">Bilingual</option>
       </select>
     </span>
-    <span class="nsr-group nsr-group-speed">
-      <select class="nsr-sel" data-act="speed" title="Playback speed">
-        <option value="0.6">0.6×</option>
-        <option value="0.7">0.7×</option>
-        <option value="0.8">0.8×</option>
-        <option value="0.9">0.9×</option>
-        <option value="0.95">0.95×</option>
-        <option value="1">1×</option>
-        <option value="1.1">1.1×</option>
-        <option value="1.25">1.25×</option>
-        <option value="1.5">1.5×</option>
-        <option value="1.75">1.75×</option>
-        <option value="2">2×</option>
-      </select>
-    </span>
-    <span class="nsr-group nsr-group-font">
-      <button class="nsr-btn" data-act="font-down" title="Smaller text">A−</button>
-      <button class="nsr-btn" data-act="font-up" title="Larger text">A+</button>
-    </span>
     <span class="nsr-group nsr-group-settings">
       <button class="nsr-btn" data-act="settings" title="Settings" aria-label="Settings">⚙</button>
     </span>
     <span class="nsr-group nsr-group-download" hidden>
-      <button class="nsr-btn" data-act="download" title="Download subtitles (.srt)" aria-label="Download subtitles">⭳</button>
+      <button class="nsr-btn nsr-btn-text" data-act="download" title="Download subtitles (.srt)" aria-label="Download subtitles">Download</button>
     </span>
     <span class="nsr-group nsr-group-toggle">
       <button class="nsr-btn nsr-btn-text" data-act="toggle" title="Hide subtitle list">Hide</button>
@@ -106,6 +87,29 @@ overlay.innerHTML = `
         <span class="nsr-toggle-slider"></span>
       </button>
     </label>
+    <label class="nsr-settings-row">
+      <span data-i18n="setting_playback_speed">Playback speed</span>
+      <select class="nsr-sel" data-act="speed" title="Playback speed">
+        <option value="0.6">0.6×</option>
+        <option value="0.7">0.7×</option>
+        <option value="0.8">0.8×</option>
+        <option value="0.9">0.9×</option>
+        <option value="0.95">0.95×</option>
+        <option value="1">1×</option>
+        <option value="1.1">1.1×</option>
+        <option value="1.25">1.25×</option>
+        <option value="1.5">1.5×</option>
+        <option value="1.75">1.75×</option>
+        <option value="2">2×</option>
+      </select>
+    </label>
+    <div class="nsr-settings-row">
+      <span data-i18n="setting_font_size">Text size</span>
+      <span class="nsr-group nsr-group-font">
+        <button class="nsr-btn" data-act="font-down" title="Smaller text">A−</button>
+        <button class="nsr-btn" data-act="font-up" title="Larger text">A+</button>
+      </span>
+    </div>
     <label class="nsr-settings-row">
       <span data-i18n="setting_ui_language">Menu language</span>
       <select class="nsr-sel" data-act="set-uilang">
@@ -167,6 +171,18 @@ function renderFontSize(): void {
   overlay.style.setProperty("--nsr-cue-size", settings.fontSize + "px");
 }
 renderFontSize();
+
+// Font buttons live inside the settings panel, whose click handler stops
+// propagation, so they need direct listeners rather than the overlay-level
+// delegated handler used by the header buttons.
+overlay.querySelector('button[data-act="font-up"]')?.addEventListener("click", () => {
+  setFontSize(settings.fontSize + FONT.step);
+  renderFontSize();
+});
+overlay.querySelector('button[data-act="font-down"]')?.addEventListener("click", () => {
+  setFontSize(settings.fontSize - FONT.step);
+  renderFontSize();
+});
 
 // ---------- Window size (persisted) ----------
 // Only apply saved size if it meets a reasonable minimum; otherwise let the
@@ -395,6 +411,7 @@ async function handleDownload(): Promise<void> {
   downloadBtn.disabled = true;
   downloadBtn.classList.add("nsr-btn-busy");
   downloadBtn.setAttribute("aria-busy", "true");
+  downloadBtn.textContent = t("download_busy");
   try {
     await downloadSrt();
   } catch (e) {
@@ -404,6 +421,7 @@ async function handleDownload(): Promise<void> {
     downloadBtn.disabled = false;
     downloadBtn.classList.remove("nsr-btn-busy");
     downloadBtn.removeAttribute("aria-busy");
+    downloadBtn.textContent = t("download");
   }
 }
 
@@ -423,6 +441,7 @@ function applyI18n(): void {
   settingsBtn.setAttribute("aria-label", t("settings_open"));
   downloadBtn.title = t("download_title");
   downloadBtn.setAttribute("aria-label", t("download_title"));
+  downloadBtn.textContent = t("download");
 
   // Collapse/expand button reflects current state.
   toggleBtn.textContent = ui.isExpanded ? t("hide") : t("show");
@@ -485,14 +504,6 @@ overlay.addEventListener("click", (e) => {
   switch (target.dataset.act) {
     case "toggle":
       toggleExpanded(target);
-      break;
-    case "font-up":
-      setFontSize(settings.fontSize + FONT.step);
-      renderFontSize();
-      break;
-    case "font-down":
-      setFontSize(settings.fontSize - FONT.step);
-      renderFontSize();
       break;
     case "download":
       e.stopPropagation();

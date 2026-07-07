@@ -75,7 +75,20 @@ function langCode(raw: string): string {
   return (raw || "").toLowerCase().split("-")[0];
 }
 
-/** Prefix a text block with its language code, e.g. `no: ...` / `en: ...`. */
+/** Norwegian is the default assumption, so its lines carry no language label. */
+function isNorwegian(code: string): boolean {
+  return code === "nb" || code === "nn" || code === "no" || code === "nob" || code === "nno";
+}
+
+/**
+ * Language label used to prefix a subtitle line. Norwegian returns an empty
+ * label (no prefix) since the source subtitles are assumed to be Norwegian.
+ */
+function displayLabel(code: string): string {
+  return isNorwegian(code) ? "" : code;
+}
+
+/** Prefix a text block with its language code, e.g. `en: ...`. */
 function withLangLabel(code: string, text: string): string {
   const body = text.replace(/\r?\n/g, "\n");
   return code ? `${code}: ${body}` : body;
@@ -84,8 +97,9 @@ function withLangLabel(code: string, text: string): string {
 /**
  * Serialise cues (with optional translations) to a SubRip-style document.
  *
- * Sequence numbers are intentionally omitted and each subtitle line is prefixed
- * with its language code (source for the original, target for the translation).
+ * Sequence numbers are intentionally omitted. Translated lines are prefixed with
+ * their language code; the original (Norwegian) line carries no label because
+ * Norwegian is the default assumption.
  */
 function buildSrt(
   cues: RemoteCue[],
@@ -93,6 +107,8 @@ function buildSrt(
   sourceLang: string,
   targetLang: string
 ): string {
+  const sourceLabel = displayLabel(sourceLang);
+  const targetLabel = displayLabel(targetLang);
   return (
     cues
       .map((c, i) => {
@@ -101,15 +117,15 @@ function buildSrt(
         if (translations) {
           const tr = (translations[i] || "").trim();
           if (settings.displayMode === "translated") {
-            body = tr ? withLangLabel(targetLang, tr) : withLangLabel(sourceLang, c.text);
+            body = tr ? withLangLabel(targetLabel, tr) : withLangLabel(sourceLabel, c.text);
           } else {
             // bilingual: original then translation
             body =
-              withLangLabel(sourceLang, c.text) +
-              (tr ? `\n${withLangLabel(targetLang, tr)}` : "");
+              withLangLabel(sourceLabel, c.text) +
+              (tr ? `\n${withLangLabel(targetLabel, tr)}` : "");
           }
         } else {
-          body = withLangLabel(sourceLang, c.text);
+          body = withLangLabel(sourceLabel, c.text);
         }
         return `${timing}\n${body}`;
       })
