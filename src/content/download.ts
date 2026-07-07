@@ -70,13 +70,9 @@ function srtTime(seconds: number): string {
   return `${pad(h)}:${pad(m)}:${pad(s)},${pad(ms, 3)}`;
 }
 
-/** Normalise a BCP-47 tag to a short code, mapping Norwegian variants to `no`. */
+/** Normalise a BCP-47 tag to its short base code (e.g. `nb`, `en`, `pl`). */
 function langCode(raw: string): string {
-  const base = (raw || "").toLowerCase().split("-")[0];
-  if (base === "nb" || base === "nn" || base === "nob" || base === "nno" || base === "nor") {
-    return "no";
-  }
-  return base;
+  return (raw || "").toLowerCase().split("-")[0];
 }
 
 /** Prefix a text block with its language code, e.g. `no: ...` / `en: ...`. */
@@ -162,7 +158,7 @@ export async function downloadSrt(): Promise<boolean> {
   if (!cues.length) return false;
 
   const lang = remote?.language || state.track?.language || "";
-  const sourceLang = langCode(lang || "no");
+  const sourceLang = langCode(lang || "nb");
   const targetLang = langCode(settings.targetLang);
 
   let translations: string[] | null = null;
