@@ -54,6 +54,7 @@
   flex-wrap: nowrap;       /* keep grouped controls together */
   flex-shrink: 0;
 }
+#nrk-sub-roller .nsr-group[hidden] { display: none; }
 #nrk-sub-roller .nsr-title { font-weight: 600; font-size: 12px; display: inline-flex; align-items: center; gap: 6px; }
 #nrk-sub-roller .nsr-icon {
   width: 16px;

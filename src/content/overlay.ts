@@ -30,6 +30,7 @@ import { invalidateRender, render, updateStatus } from "./renderer";
 import { onTranslationConfigChanged } from "./translator";
 import { applyNativeSubtitleVisibility } from "./native-subtitles";
 import { getUiLang, onUiLangChange, setUiLang, t } from "./i18n";
+import { downloadSrt, hasSubtitles } from "./download";
 
 declare const chrome: any;
 
@@ -89,6 +90,9 @@ overlay.innerHTML = `
     </span>
     <span class="nsr-group nsr-group-settings">
       <button class="nsr-btn" data-act="settings" title="Settings" aria-label="Settings">⚙</button>
+    </span>
+    <span class="nsr-group nsr-group-download" hidden>
+      <button class="nsr-btn" data-act="download" title="Download subtitles (.srt)" aria-label="Download subtitles">⭳</button>
     </span>
     <span class="nsr-group nsr-group-toggle">
       <button class="nsr-btn nsr-btn-text" data-act="toggle" title="Hide subtitle list">Hide</button>
@@ -372,6 +376,17 @@ uiLangSel.addEventListener("change", () => {
   setUiLang(uiLangSel.value as UiLang);
 });
 
+// ---------- Download subtitles (.srt) ----------
+// The button only appears once subtitles have actually been loaded into the
+// app; downloading serialises everything accumulated so far to a .srt file.
+const downloadGroup = overlay.querySelector(".nsr-group-download") as HTMLSpanElement;
+const downloadBtn = overlay.querySelector('button[data-act="download"]') as HTMLButtonElement;
+export function syncDownloadButton(): void {
+  downloadGroup.hidden = !hasSubtitles();
+}
+syncDownloadButton();
+window.addEventListener("nsr-subtitles-updated", syncDownloadButton);
+
 // ---------- i18n: (re)apply all static UI strings ----------
 function applyI18n(): void {
   langSel.title = t("translate_to");
@@ -386,6 +401,8 @@ function applyI18n(): void {
   setTitle('button[data-act="font-up"]', t("font_larger"));
   settingsBtn.title = t("settings_open");
   settingsBtn.setAttribute("aria-label", t("settings_open"));
+  downloadBtn.title = t("download_title");
+  downloadBtn.setAttribute("aria-label", t("download_title"));
 
   // Collapse/expand button reflects current state.
   toggleBtn.textContent = ui.isExpanded ? t("hide") : t("show");
@@ -456,6 +473,10 @@ overlay.addEventListener("click", (e) => {
     case "font-down":
       setFontSize(settings.fontSize - FONT.step);
       renderFontSize();
+      break;
+    case "download":
+      e.stopPropagation();
+      downloadSrt();
       break;
   }
 });

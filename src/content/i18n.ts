@@ -30,6 +30,7 @@ export type MessageKey =
   | "no_translation"
   | "settings_open"
   | "settings_heading"
+  | "download_title"
   | "setting_enable_translation"
   | "setting_ui_language"
   | "feedback_intro"
@@ -62,6 +63,7 @@ const MESSAGES: Record<UiLang, Messages> = {
     no_translation: "— No translation —",
     settings_open: "Settings",
     settings_heading: "Settings",
+    download_title: "Download subtitles (.srt)",
     setting_enable_translation: "Enable translation",
     setting_ui_language: "Menu language",
     feedback_intro: "Found a bug, issue or have a suggestion?",
@@ -91,6 +93,7 @@ const MESSAGES: Record<UiLang, Messages> = {
     no_translation: "— Ingen oversettelse —",
     settings_open: "Innstillinger",
     settings_heading: "Innstillinger",
+    download_title: "Last ned undertekster (.srt)",
     setting_enable_translation: "Aktiver oversettelse",
     setting_ui_language: "Menyspråk",
     feedback_intro: "Funnet en feil eller har et forslag?",
