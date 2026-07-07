@@ -6,6 +6,14 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Changed
+
+- **Translation controls moved into a dedicated menu.** A new translation menu
+  button (globe icon) in the overlay header opens a panel that groups the
+  Enable translation toggle (moved out of Settings), the Translate to language
+  picker, and the Display mode selector, mirroring the Settings menu. This
+  declutters the header and keeps all translation options in one place.
+
 ## [0.2.0]
 
 ### Added

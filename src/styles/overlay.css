@@ -123,7 +123,8 @@
   border-color: rgba(255, 255, 255, 0.4);
 }
 
-#nrk-sub-roller .nsr-settings {
+#nrk-sub-roller .nsr-settings,
+#nrk-sub-roller .nsr-translate-panel {
   position: absolute;
   top: 40px;
   right: 8px;
@@ -138,7 +139,8 @@
   flex-direction: column;
   gap: 10px;
 }
-#nrk-sub-roller .nsr-settings[hidden] { display: none; }
+#nrk-sub-roller .nsr-settings[hidden],
+#nrk-sub-roller .nsr-translate-panel[hidden] { display: none; }
 #nrk-sub-roller .nsr-settings-title {
   font-weight: 600;
   font-size: 12px;
@@ -200,7 +202,8 @@
   font-weight: bold;
   font-size: 1.1em;
 }
-#nrk-sub-roller .nsr-settings-close {
+#nrk-sub-roller .nsr-settings-close,
+#nrk-sub-roller .nsr-translate-close {
   background: none;
   border: none;
   color: #fff;
@@ -211,7 +214,9 @@
   transition: background 0.15s;
 }
 #nrk-sub-roller .nsr-settings-close:hover,
-#nrk-sub-roller .nsr-settings-close:focus {
+#nrk-sub-roller .nsr-settings-close:focus,
+#nrk-sub-roller .nsr-translate-close:hover,
+#nrk-sub-roller .nsr-translate-close:focus {
   background: rgba(255,255,255,0.12);
 }
 #nrk-sub-roller .nsr-settings-foot {
