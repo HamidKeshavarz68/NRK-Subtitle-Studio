@@ -64,11 +64,11 @@ overlay.innerHTML = `
     <span class="nsr-group nsr-group-translate">
       <button class="nsr-btn nsr-btn-text" data-act="translate-menu" title="Translation" aria-label="Translation">Translation</button>
     </span>
-    <span class="nsr-group nsr-group-settings">
-      <button class="nsr-btn nsr-btn-text" data-act="settings" title="Settings" aria-label="Settings">Settings</button>
-    </span>
     <span class="nsr-group nsr-group-download" hidden>
       <button class="nsr-btn nsr-btn-text" data-act="download" title="Download subtitles (.srt)" aria-label="Download subtitles">Download subtitle</button>
+    </span>
+    <span class="nsr-group nsr-group-settings">
+      <button class="nsr-btn nsr-btn-text" data-act="settings" title="Settings" aria-label="Settings">Settings</button>
     </span>
     <span class="nsr-group nsr-group-toggle">
       <button class="nsr-btn nsr-btn-text" data-act="toggle" title="Hide subtitle list">Hide</button>
