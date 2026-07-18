@@ -318,20 +318,18 @@ langSel.innerHTML = LANGS.map((l) => `<option value="${l.code}">${l.name}</optio
 langSel.value = settings.targetLang;
 modeSel.value = settings.displayMode;
 
-function syncModeSelVisibility(): void {
-  modeSel.style.display = settings.targetLang === "off" ? "none" : "";
-}
 function syncLangSelVisibility(): void {
   // No need to pick a target language if the user only wants the original;
-  // hide the whole "Translate to" row in that case.
+  // hide the whole "Translate to" row in that case. The "Display mode" select
+  // above stays visible at all times so it always offers a way out of
+  // "original" — otherwise a fresh user (default "off" + "original") would see
+  // an empty panel with no control to enable translation.
   langRow.style.display = settings.displayMode === "original" ? "none" : "";
 }
-syncModeSelVisibility();
 syncLangSelVisibility();
 
 langSel.addEventListener("change", () => {
   setTargetLang(langSel.value);
-  syncModeSelVisibility();
   onTranslationConfigChanged();
 });
 modeSel.addEventListener("change", () => {
