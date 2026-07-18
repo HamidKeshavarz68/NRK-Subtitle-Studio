@@ -31,6 +31,9 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   chosen now auto-selects a sensible default (the menu language when it differs
   from the subtitle's source language, otherwise English), so translation takes
   effect immediately instead of silently staying off.
+- The "enable subtitles in the NRK player" footer tip now only shows while no
+  subtitles have been captured yet. Once subtitles are available it is hidden,
+  since the advice no longer applies.
 - Removed the separate "Enable translation" toggle. Translation is now driven
   entirely by the Display mode and target language, so there is no redundant
   master switch to keep in sync.

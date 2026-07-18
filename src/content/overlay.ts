@@ -155,6 +155,7 @@ overlay.innerHTML = `
 export const listEl = overlay.querySelector(".nsr-list") as HTMLDivElement;
 export const statusEl = overlay.querySelector(".nsr-status") as HTMLSpanElement;
 const bodyEl = overlay.querySelector(".nsr-body") as HTMLDivElement;
+const footEl = overlay.querySelector(".nsr-foot") as HTMLDivElement;
 const settingsPanel = overlay.querySelector(".nsr-settings") as HTMLDivElement;
 const translatePanel = overlay.querySelector(".nsr-translate-panel") as HTMLDivElement;
 
@@ -424,7 +425,11 @@ uiLangSel.addEventListener("change", () => {
 const downloadGroup = overlay.querySelector(".nsr-group-download") as HTMLSpanElement;
 const downloadBtn = overlay.querySelector('button[data-act="download"]') as HTMLButtonElement;
 export function syncDownloadButton(): void {
-  downloadGroup.hidden = !hasSubtitles();
+  const available = hasSubtitles();
+  downloadGroup.hidden = !available;
+  // The tip only helps users who have not captured any subtitles yet; once
+  // subtitles are available (i.e. enabled in the NRK player) it's redundant.
+  footEl.hidden = available;
 }
 syncDownloadButton();
 window.addEventListener("nsr-subtitles-updated", syncDownloadButton);
@@ -500,7 +505,6 @@ function setTitle(selector: string, title: string): void {
 }
 
 const toggleBtn = overlay.querySelector('button[data-act="toggle"]') as HTMLButtonElement;
-const footEl = overlay.querySelector(".nsr-foot") as HTMLDivElement;
 
 onUiLangChange(applyI18n);
 applyI18n();
