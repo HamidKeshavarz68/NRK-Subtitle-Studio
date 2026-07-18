@@ -28,6 +28,7 @@
 #nrk-sub-roller .nsr-rh {
   position: absolute;
   z-index: 2;
+  touch-action: none;
 }
 #nrk-sub-roller .nsr-rh-n  { top: -3px;    left: 6px;   right: 6px;  height: 6px; cursor: ns-resize; }
 #nrk-sub-roller .nsr-rh-s  { bottom: -3px; left: 6px;   right: 6px;  height: 6px; cursor: ns-resize; }
@@ -48,6 +49,19 @@
   user-select: none;
   flex-wrap: wrap;
   min-width: 0;
+  touch-action: none;
+}
+
+/* Coarse pointers (touch) need larger hit targets to grab the edges. */
+@media (pointer: coarse) {
+  #nrk-sub-roller .nsr-rh-n  { top: -6px;    height: 14px; }
+  #nrk-sub-roller .nsr-rh-s  { bottom: -6px; height: 14px; }
+  #nrk-sub-roller .nsr-rh-w  { left: -6px;   width: 14px;  }
+  #nrk-sub-roller .nsr-rh-e  { right: -6px;  width: 14px;  }
+  #nrk-sub-roller .nsr-rh-nw { top: -6px;    left: -6px;   width: 22px; height: 22px; }
+  #nrk-sub-roller .nsr-rh-ne { top: -6px;    right: -6px;  width: 22px; height: 22px; }
+  #nrk-sub-roller .nsr-rh-sw { bottom: -6px; left: -6px;   width: 22px; height: 22px; }
+  #nrk-sub-roller .nsr-rh-se { bottom: -6px; right: -6px;  width: 22px; height: 22px; }
 }
 #nrk-sub-roller .nsr-group {
   display: inline-flex;

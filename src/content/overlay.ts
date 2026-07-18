@@ -245,19 +245,23 @@ speedSel.addEventListener("change", () => {
 });
 
 // ---------- Custom resize from any edge / corner ----------
-// Eight invisible handles translate mouse drags into width/height/top/left.
+// Eight invisible handles translate pointer drags into width/height/top/left.
+// Pointer events (with pointer capture) make this work for mouse, touch and
+// pen alike, so resize works on Android extension browsers too.
 overlay.querySelectorAll<HTMLElement>(".nsr-rh").forEach((handle) => {
-  handle.addEventListener("mousedown", (e: MouseEvent) => {
+  handle.addEventListener("pointerdown", (e: PointerEvent) => {
     e.preventDefault();
     e.stopPropagation();
     const dir = handle.dataset.dir || "";
     const start = overlay.getBoundingClientRect();
     const sx = e.clientX;
     const sy = e.clientY;
+    const pointerId = e.pointerId;
     const maxW = Math.min(window.innerWidth * 0.95, window.innerWidth - 4);
     const maxH = Math.min(window.innerHeight * 0.95, window.innerHeight - 4);
 
-    const onMove = (ev: MouseEvent) => {
+    const onMove = (ev: PointerEvent) => {
+      if (ev.pointerId !== pointerId) return;
       const dx = ev.clientX - sx;
       const dy = ev.clientY - sy;
       let left = start.left;
@@ -302,13 +306,17 @@ overlay.querySelectorAll<HTMLElement>(".nsr-rh").forEach((handle) => {
       overlay.style.width = w + "px";
       overlay.style.height = h + "px";
     };
-    const onUp = () => {
-      window.removeEventListener("mousemove", onMove);
-      window.removeEventListener("mouseup", onUp);
+    const onUp = (ev: PointerEvent) => {
+      if (ev.pointerId !== pointerId) return;
+      handle.removeEventListener("pointermove", onMove);
+      handle.removeEventListener("pointerup", onUp);
+      handle.removeEventListener("pointercancel", onUp);
       // The ResizeObserver above persists the new size.
     };
-    window.addEventListener("mousemove", onMove);
-    window.addEventListener("mouseup", onUp);
+    try { handle.setPointerCapture(pointerId); } catch { /* ignore */ }
+    handle.addEventListener("pointermove", onMove);
+    handle.addEventListener("pointerup", onUp);
+    handle.addEventListener("pointercancel", onUp);
   });
 });
 
@@ -560,25 +568,33 @@ makeDraggable(overlay, overlay.querySelector(".nsr-header") as HTMLElement);
 
 function makeDraggable(el: HTMLElement, handle: HTMLElement): void {
   let dragging = false;
-  let sx = 0, sy = 0, ox = 0, oy = 0;
-  handle.addEventListener("mousedown", (e: MouseEvent) => {
+  let sx = 0, sy = 0, ox = 0, oy = 0, pointerId = -1;
+  handle.addEventListener("pointerdown", (e: PointerEvent) => {
     // Don't drag when clicking interactive controls.
     const tag = (e.target as HTMLElement).tagName;
     if (tag === "BUTTON" || tag === "SELECT" || tag === "OPTION") return;
     dragging = true;
+    pointerId = e.pointerId;
     sx = e.clientX; sy = e.clientY;
     const r = el.getBoundingClientRect();
     ox = r.left; oy = r.top;
     el.style.right = "auto";
     el.style.bottom = "auto";
+    try { handle.setPointerCapture(pointerId); } catch { /* ignore */ }
     e.preventDefault();
   });
-  window.addEventListener("mousemove", (e: MouseEvent) => {
-    if (!dragging) return;
+  handle.addEventListener("pointermove", (e: PointerEvent) => {
+    if (!dragging || e.pointerId !== pointerId) return;
     el.style.left = Math.max(0, ox + e.clientX - sx) + "px";
     el.style.top = Math.max(0, oy + e.clientY - sy) + "px";
   });
-  window.addEventListener("mouseup", () => { dragging = false; });
+  const end = (e: PointerEvent) => {
+    if (e.pointerId !== pointerId) return;
+    dragging = false;
+    pointerId = -1;
+  };
+  handle.addEventListener("pointerup", end);
+  handle.addEventListener("pointercancel", end);
 }
 
 // Re-apply the persisted playback rate if/when a video is present.

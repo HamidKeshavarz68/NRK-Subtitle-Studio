@@ -10,6 +10,13 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Fixed
 
+- **Moving and resizing the overlay did not work on Android extension browsers.**
+  Both interactions listened only for mouse events (`mousedown`/`mousemove`/
+  `mouseup`), which touchscreens never fire, so the panel could not be dragged or
+  resized by touch. They now use Pointer Events with pointer capture, so mouse,
+  touch and pen all work. The drag header and resize edges also set
+  `touch-action: none` (so the page does not scroll while you drag), and the
+  resize handles grow to finger-sized hit targets on touch devices.
 - **Disabling subtitles in the NRK player froze the overlay instead of showing
   the tip.** When subtitles are turned off the player disables the track and its
   cues go null; the overlay kept displaying the last-loaded cues (which no longer
