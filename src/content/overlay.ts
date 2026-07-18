@@ -16,6 +16,7 @@ import {
 } from "./config";
 import {
   applyPlaybackRate,
+  detectSourceLang,
   setDisplayMode,
   setFontSize,
   setPlaybackRate,
@@ -328,12 +329,29 @@ function syncLangSelVisibility(): void {
 }
 syncLangSelVisibility();
 
+// Pick a sensible target language when the user turns translation on without
+// having chosen one yet, so switching to Translated/Bilingual has an immediate
+// visible effect instead of silently staying "off". Prefer the UI language
+// (what the user reads) as long as it differs from the subtitle's source
+// language; otherwise fall back to English.
+function defaultTargetLang(): string {
+  const uiLang = getUiLang();
+  const source = detectSourceLang();
+  if (uiLang !== source && LANGS.some((l) => l.code === uiLang)) return uiLang;
+  return "en";
+}
+
 langSel.addEventListener("change", () => {
   setTargetLang(langSel.value);
   onTranslationConfigChanged();
 });
 modeSel.addEventListener("change", () => {
   setDisplayMode(modeSel.value as DisplayMode);
+  if (settings.displayMode !== "original" && settings.targetLang === "off") {
+    const lang = defaultTargetLang();
+    setTargetLang(lang);
+    langSel.value = lang;
+  }
   syncLangSelVisibility();
   updateStatus();
   invalidateRender();
