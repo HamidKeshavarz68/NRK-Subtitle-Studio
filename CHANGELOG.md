@@ -6,6 +6,18 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-07-18
+
+### Fixed
+
+- **Translation menu was unusable on a fresh install.** At the default settings
+  (Display mode "Original", no target language), the panel hid both of its
+  controls at once, so opening it showed only the "Display mode" label with
+  nothing to interact with and no way to enable translation. This was most
+  visible on Android extension browsers, where storage starts empty so every
+  user hit the default state. The Display mode selector now stays visible at all
+  times, so translation can always be enabled.
+
 ### Changed
 
 - **Translation controls moved into a dedicated menu.** A new Translation menu
@@ -15,6 +27,10 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - **New users now start on the original subtitles.** The default display mode is
   now "Original" instead of bilingual, so translation only happens once the user
   explicitly chooses a translated or bilingual mode.
+- Switching Display mode to Translated or Bilingual without a target language
+  chosen now auto-selects a sensible default (the menu language when it differs
+  from the subtitle's source language, otherwise English), so translation takes
+  effect immediately instead of silently staying off.
 - Removed the separate "Enable translation" toggle. Translation is now driven
   entirely by the Display mode and target language, so there is no redundant
   master switch to keep in sync.
