@@ -6,6 +6,35 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-07-18
+
+### Fixed
+
+- **Moving and resizing the overlay did not work on Android extension browsers.**
+  Both interactions listened only for mouse events (`mousedown`/`mousemove`/
+  `mouseup`), which touchscreens never fire, so the panel could not be dragged or
+  resized by touch. They now use Pointer Events with pointer capture, so mouse,
+  touch and pen all work. The drag header and resize edges also set
+  `touch-action: none` (so the page does not scroll while you drag), and the
+  resize handles grow to finger-sized hit targets on touch devices.
+- **Disabling subtitles in the NRK player froze the overlay instead of showing
+  the tip.** When subtitles are turned off the player disables the track and its
+  cues go null; the overlay kept displaying the last-loaded cues (which no longer
+  advanced) and never reset. It now detects when no subtitle track is enabled,
+  clears the stale cues, and shows the "enable subtitles" tip again.
+- **Text size A- / A+ buttons did nothing on Android extension browsers.**
+  Without `touch-action: manipulation`, the browser held each tap to watch for a
+  double-tap-to-zoom, so rapid repeated taps on the steppers were swallowed. The
+  overlay's buttons and selects now opt out of that delay, so taps register
+  immediately.
+- **Translation menu was unusable on a fresh install.** At the default settings
+  (Display mode "Original", no target language), the panel hid both of its
+  controls at once, so opening it showed only the "Display mode" label with
+  nothing to interact with and no way to enable translation. This was most
+  visible on Android extension browsers, where storage starts empty so every
+  user hit the default state. The Display mode selector now stays visible at all
+  times, so translation can always be enabled.
+
 ### Changed
 
 - **Translation controls moved into a dedicated menu.** A new Translation menu
@@ -15,6 +44,13 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - **New users now start on the original subtitles.** The default display mode is
   now "Original" instead of bilingual, so translation only happens once the user
   explicitly chooses a translated or bilingual mode.
+- Switching Display mode to Translated or Bilingual without a target language
+  chosen now auto-selects a sensible default (the menu language when it differs
+  from the subtitle's source language, otherwise English), so translation takes
+  effect immediately instead of silently staying off.
+- The "enable subtitles in the NRK player" footer tip now only shows while no
+  subtitles have been captured yet. Once subtitles are available it is hidden,
+  since the advice no longer applies.
 - Removed the separate "Enable translation" toggle. Translation is now driven
   entirely by the Display mode and target language, so there is no redundant
   master switch to keep in sync.
