@@ -11,7 +11,7 @@ import { applyPlaybackRate, settings, state } from "./state";
 import { isSubtitleTrack } from "./utils";
 import { render, setStatus, updateStatus, invalidateRender } from "./renderer";
 import { onTranslationConfigChanged, stopTranslations } from "./translator";
-import { accumulateCues, resetAccumulatedCues } from "./download";
+import { accumulateCues, hasSubtitles, resetAccumulatedCues } from "./download";
 
 /** Marker so each track is hooked for cue updates only once. */
 const HOOKED = "__nsrHooked";
@@ -63,7 +63,16 @@ export function attachToVideo(video: HTMLVideoElement): void {
   // it's a no-op when nothing changed) then render. This recovers even if a
   // `cuechange` event is missed when the player evicts/replaces buffered cues.
   const onTimeUpdate = () => {
-    if (state.track) snapshotCues(state.track);
+    // If the tracked subtitle track was turned off (mode 'disabled' → cues go
+    // null), re-scan so stale cues get cleared promptly and the tip shows,
+    // rather than freezing on the last-loaded cues until the periodic scan.
+    if (state.track) {
+      if (state.track.mode === "disabled" || !state.track.cues) {
+        scanTextTracks(video);
+      } else {
+        snapshotCues(state.track);
+      }
+    }
     render();
   };
   const onRateChange = () => {
@@ -105,10 +114,16 @@ export function scanTextTracks(video: HTMLVideoElement): void {
   const tracks = video.textTracks;
   let bestTrack: TextTrack | null = null;
   let bestCount = 0;
+  let anyEnabled = false;
 
   for (let i = 0; i < tracks.length; i++) {
     const t = tracks[i];
     if (!isSubtitleTrack(t)) continue;
+
+    // A subtitle track the player is still feeding (the user has subtitles on).
+    // When the user turns subtitles off, the player sets the track to
+    // 'disabled' (and its cues go null), so this flags whether any remain on.
+    if (t.mode !== "disabled") anyEnabled = true;
 
     // We deliberately do NOT change t.mode here. The player only streams
     // subtitle segments while the track is visible/showing, so forcing it to
@@ -130,8 +145,28 @@ export function scanTextTracks(video: HTMLVideoElement): void {
     }
   }
 
-  if (bestTrack && bestCount > 0) snapshotCues(bestTrack);
-  else setStatus(`no cues yet (${tracks.length} track${tracks.length === 1 ? "" : "s"} found)`);
+  if (bestTrack && bestCount > 0) {
+    snapshotCues(bestTrack);
+  } else if (!anyEnabled && (state.track || state.cues.length || hasSubtitles())) {
+    // Subtitles were turned off entirely: drop the stale cues so the overlay
+    // shows the "enable subtitles" tip instead of freezing on the last cues.
+    clearSubtitleState();
+  } else {
+    setStatus(`no cues yet (${tracks.length} track${tracks.length === 1 ? "" : "s"} found)`);
+  }
+}
+
+/** Reset all subtitle-derived state (used when the user disables subtitles). */
+function clearSubtitleState(): void {
+  state.track = null;
+  state.cues = [];
+  lastCueSig = "";
+  lastFirstStart = -1;
+  stopTranslations();
+  resetAccumulatedCues();
+  updateStatus();
+  invalidateRender();
+  render();
 }
 
 /** Cheap fingerprint of a cue set: count plus the boundary timestamps. */

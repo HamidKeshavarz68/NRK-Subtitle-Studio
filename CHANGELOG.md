@@ -10,6 +10,11 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Fixed
 
+- **Disabling subtitles in the NRK player froze the overlay instead of showing
+  the tip.** When subtitles are turned off the player disables the track and its
+  cues go null; the overlay kept displaying the last-loaded cues (which no longer
+  advanced) and never reset. It now detects when no subtitle track is enabled,
+  clears the stale cues, and shows the "enable subtitles" tip again.
 - **Text size A- / A+ buttons did nothing on Android extension browsers.**
   Without `touch-action: manipulation`, the browser held each tap to watch for a
   double-tap-to-zoom, so rapid repeated taps on the steppers were swallowed. The
