@@ -118,6 +118,10 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  /* Disable the ~300ms double-tap-to-zoom delay on touch (Android extension
+     browsers); without it, rapid repeated taps on steppers like A-/A+ get
+     swallowed as a zoom gesture and appear to do nothing. */
+  touch-action: manipulation;
 }
 #nrk-sub-roller .nsr-btn:hover { background: rgba(255, 255, 255, 0.12); }
 #nrk-sub-roller .nsr-btn-busy {
@@ -142,6 +146,7 @@
   font-size: 11px;
   cursor: pointer;
   max-width: 110px;
+  touch-action: manipulation;
 }
 #nrk-sub-roller .nsr-sel option {
   background: #1d1d22;

@@ -10,6 +10,11 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Fixed
 
+- **Text size A- / A+ buttons did nothing on Android extension browsers.**
+  Without `touch-action: manipulation`, the browser held each tap to watch for a
+  double-tap-to-zoom, so rapid repeated taps on the steppers were swallowed. The
+  overlay's buttons and selects now opt out of that delay, so taps register
+  immediately.
 - **Translation menu was unusable on a fresh install.** At the default settings
   (Display mode "Original", no target language), the panel hid both of its
   controls at once, so opening it showed only the "Display mode" label with

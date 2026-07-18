@@ -103,8 +103,8 @@ overlay.innerHTML = `
     <div class="nsr-settings-row">
       <span data-i18n="setting_font_size">Text size</span>
       <span class="nsr-group nsr-group-font">
-        <button class="nsr-btn" data-act="font-down" title="Smaller text">A−</button>
-        <button class="nsr-btn" data-act="font-up" title="Larger text">A+</button>
+        <button class="nsr-btn" type="button" data-act="font-down" title="Smaller text">A−</button>
+        <button class="nsr-btn" type="button" data-act="font-up" title="Larger text">A+</button>
       </span>
     </div>
     <div class="nsr-settings-foot">
