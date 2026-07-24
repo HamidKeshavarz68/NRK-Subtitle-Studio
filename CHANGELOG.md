@@ -6,6 +6,19 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- **Choose your translation engine (Google or DeepL).** A new **Translator**
+  option in the Settings menu lets you pick between the free Google Translate
+  endpoint (default, unchanged behavior) and **DeepL**. Selecting DeepL reveals a
+  field to paste your DeepL API key (free `:fx` and Pro keys both work — the
+  correct endpoint is chosen automatically). If the key is missing, wrong, out of
+  quota, or the target language isn't supported by DeepL, translation
+  transparently falls back to free Google Translate and shows a brief on-screen
+  warning. The provider and key are persisted locally; everything runs through
+  the existing service-worker proxy so it works on mobile and ARM devices
+  (e.g. Raspberry Pi) too.
+
 ## [0.3.0] - 2026-07-18
 
 ### Fixed

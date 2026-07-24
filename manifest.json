@@ -25,7 +25,9 @@
     "https://tv.nrk.no/*",
     "https://psapi.nrk.no/*",
     "https://*.nrk.no/*",
-    "https://translate.googleapis.com/*"
+    "https://translate.googleapis.com/*",
+    "https://api-free.deepl.com/*",
+    "https://api.deepl.com/*"
   ],
   "web_accessible_resources": [
     {

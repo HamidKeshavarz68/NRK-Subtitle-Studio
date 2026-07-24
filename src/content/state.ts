@@ -6,7 +6,7 @@
  * persistence so callers never have to touch storage directly.
  */
 
-import { DisplayMode, FONT, SPEED, STORAGE_KEYS } from "./config";
+import { DisplayMode, FONT, SPEED, STORAGE_KEYS, TranslatorProvider, DEFAULT_TRANSLATOR } from "./config";
 import { clamp, readStorage, writeStorage } from "./utils";
 
 export interface AppState {
@@ -35,6 +35,12 @@ export interface Settings {
   displayMode: DisplayMode;
   fontSize: number;
   playbackRate: number;
+  translator: TranslatorProvider;
+  deeplApiKey: string;
+}
+
+function readTranslator(): TranslatorProvider {
+  return readStorage(STORAGE_KEYS.translator) === "deepl" ? "deepl" : DEFAULT_TRANSLATOR;
 }
 
 export const settings: Settings = {
@@ -42,7 +48,19 @@ export const settings: Settings = {
   displayMode: (readStorage(STORAGE_KEYS.displayMode) as DisplayMode) || "original",
   fontSize: clampFont(parseInt(readStorage(STORAGE_KEYS.fontSize) || "", 10) || FONT.default),
   playbackRate: clampSpeed(parseFloat(readStorage(STORAGE_KEYS.playbackRate) || "") || SPEED.default),
+  translator: readTranslator(),
+  deeplApiKey: readStorage(STORAGE_KEYS.deeplApiKey) || "",
 };
+
+export function setTranslator(provider: TranslatorProvider): void {
+  settings.translator = provider;
+  writeStorage(STORAGE_KEYS.translator, provider);
+}
+
+export function setDeeplApiKey(key: string): void {
+  settings.deeplApiKey = key;
+  writeStorage(STORAGE_KEYS.deeplApiKey, key);
+}
 
 export function setTargetLang(lang: string): void {
   settings.targetLang = lang;

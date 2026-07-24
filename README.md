@@ -85,7 +85,7 @@ Then:
 | **Mode** | `Original` / `Translated` / `Bilingual`. Bilingual shows the original above and a smaller, blue, italic translation below. Hidden when language is off. |
 | **0.5× – 2×** | Sets `video.playbackRate` and re-asserts it if the player tries to reset. |
 | **A− / A+** | Cue font size (10 px – 32 px, persisted). |
-| **⚙ Settings** | Opens a dropdown to enable/disable translation and switch the menu language (English / Norsk). |
+| **⚙ Settings** | Opens a dropdown to switch the menu language (English / Norsk), pick the **translator** (Google — free, default — or DeepL with your API key), and adjust playback speed / text size. |
 | **Hide / Show** | Collapses the window to just the toolbar, or restores its previous size. |
 
 The settings dropdown is localised with a small built-in i18n layer (`src/content/i18n.ts`).
@@ -219,6 +219,16 @@ active line auto-scrolls to the centre.
   repeats and seeks don't re-translate.
 - Falls back to per-cue requests if the separator gets mangled.
 
+**DeepL (optional, API key).** Selecting DeepL in Settings routes the same
+batched requests through DeepL's `/v2/translate` API instead (the free
+`api-free.deepl.com` or Pro `api.deepl.com` host is chosen automatically from
+the key's `:fx` suffix), still proxied via the service worker. Batched cues are
+sent as individual `text` parameters and rejoined, so splitting stays exact. If
+the key is missing/invalid, the quota is exhausted, or the target language isn't
+supported by DeepL, the request transparently falls back to the free Google
+endpoint and a short toast warns the user. The per-pair cache is keyed by
+provider, so switching engines never shows stale results.
+
 ### Resizing & dragging
 
 Eight invisible handles (4 edges + 4 corners) translate mouse drags into
@@ -237,6 +247,8 @@ across reloads, but **size is** (`localStorage.nsr.size`).
 | `nsr.playbackRate` | number 0.25 – 4 |
 | `nsr.translationEnabled` | `true` / `false` (translation master switch) |
 | `nsr.uiLang` | `en` / `no` (menu language) |
+| `nsr.translator` | `google` / `deepl` (translation provider) |
+| `nsr.deeplApiKey` | DeepL API key (used only when provider is `deepl`) |
 
 ## File layout
 
@@ -260,7 +272,8 @@ my-extension/
     │   ├── config.ts          Constants, language list, shared types
     │   ├── utils.ts           Pure helpers (strip/normalize/escape/time/storage)
     │   ├── state.ts           Shared state + persisted settings
-    │   ├── translator.ts      Google Translate proxy + coalesced batch engine
+    │   ├── translator.ts      Translate proxy (Google/DeepL) + coalesced batch engine
+    │   ├── toast.ts           Short-lived on-screen notices (e.g. DeepL fallback)
     │   ├── native-subtitles.ts Hide/restore NRK's native captions
     │   ├── renderer.ts        Status line + rolling-window render
     │   ├── overlay.ts         Overlay DOM, toolbar, settings menu, drag/resize, click-to-seek
@@ -289,8 +302,8 @@ Built with `npm run build` → `dist/content/index.js` and
 
 ## Roadmap
 
-- Optional cloud providers with API keys (DeepL, Google Cloud Translation
-  v3) for higher quality / quota guarantees.
+- Optional cloud providers with API keys (Google Cloud Translation v3) for
+  higher quality / quota guarantees. (DeepL is now supported — see Settings.)
 - Persistent translation cache per-program in `chrome.storage.local`.
 - Export current transcript (original + translation) as `.srt` / `.vtt`.
 
