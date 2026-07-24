@@ -2,7 +2,7 @@
   --nsr-cue-size: 13px;
   position: fixed;
   top: 16px;
-  right: 16px;
+  left: 16px;
   width: 28vw;
   height: 70vh;
   min-width: 240px;
@@ -165,6 +165,58 @@
 #nrk-sub-roller .nsr-sel option {
   background: #1d1d22;
   color: #f5f5f7;
+}
+
+/* Settings row that stacks its label above a full-width control (API key). */
+#nrk-sub-roller .nsr-settings-row-col {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
+}
+#nrk-sub-roller .nsr-settings-row-col[hidden] { display: none; }
+#nrk-sub-roller .nsr-input {
+  box-sizing: border-box;
+  width: 100%;
+  background: rgba(255, 255, 255, 0.08);
+  color: #f5f5f7;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+  height: 26px;
+  padding: 0 6px;
+  font-size: 11px;
+  touch-action: manipulation;
+}
+#nrk-sub-roller .nsr-input::placeholder { color: rgba(245, 245, 247, 0.4); }
+#nrk-sub-roller .nsr-input:focus {
+  outline: none;
+  border-color: #6cb4ff;
+}
+
+/* Short-lived notice bar (e.g. DeepL -> Google fallback), shown directly under
+   the toolbar so it clearly belongs to the extension. */
+#nrk-sub-roller .nsr-notice {
+  flex: 0 0 auto;
+  box-sizing: border-box;
+  padding: 8px 12px;
+  background: rgba(255, 157, 58, 0.14);
+  color: #ffd7ab;
+  border-bottom: 1px solid rgba(255, 157, 58, 0.55);
+  font-size: 12px;
+  line-height: 1.35;
+  text-align: center;
+  max-height: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+  opacity: 0;
+  overflow: hidden;
+  transition: max-height 0.2s ease, opacity 0.2s ease, padding 0.2s ease;
+}
+#nrk-sub-roller .nsr-notice[hidden] { display: none; }
+#nrk-sub-roller .nsr-notice.nsr-notice-show {
+  max-height: 120px;
+  padding-top: 8px;
+  padding-bottom: 8px;
+  opacity: 1;
 }
 
 #nrk-sub-roller .nsr-btn-active {

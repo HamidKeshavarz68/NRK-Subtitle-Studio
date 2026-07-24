@@ -6,6 +6,17 @@ export type DisplayMode = "original" | "translated" | "bilingual";
 export type TranslationState = "pending" | "done" | "error";
 export type UiLang = "en" | "no";
 
+/** Translation backend. "google" is the free public endpoint (default). */
+export type TranslatorProvider = "google" | "deepl";
+
+export const DEFAULT_TRANSLATOR: TranslatorProvider = "google";
+
+/** Selectable translation providers (shown in the settings menu). */
+export const TRANSLATORS: { code: TranslatorProvider; name: string }[] = [
+  { code: "google", name: "Google (free)" },
+  { code: "deepl", name: "DeepL (API key)" },
+];
+
 export const OVERLAY_ID = "nrk-sub-roller";
 
 /** Selectable UI (menu) languages. */
@@ -24,6 +35,8 @@ export const STORAGE_KEYS = {
   targetLang: "nsr.targetLang",
   displayMode: "nsr.displayMode",
   uiLang: "nsr.uiLang",
+  translator: "nsr.translator",
+  deeplApiKey: "nsr.deeplApiKey",
 } as const;
 
 export const FONT = { min: 10, max: 32, step: 2, default: 13 } as const;

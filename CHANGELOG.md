@@ -6,6 +6,37 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-07-24
+
+### Added
+
+- **Choose your translation engine (Google or DeepL).** A new **Translator**
+  option in the Settings menu lets you pick between the free Google Translate
+  endpoint (default, unchanged behavior) and **DeepL**. Selecting DeepL reveals a
+  field to paste your DeepL API key (free `:fx` and Pro keys both work — the
+  correct endpoint is chosen automatically). If the key is missing, wrong, out of
+  quota, or the target language isn't supported by DeepL, translation
+  transparently falls back to free Google Translate and shows a 7-second warning
+  bar directly under the extension's toolbar. The provider and key are persisted locally; everything runs through
+  the existing service-worker proxy so it works on mobile and ARM devices
+  (e.g. Raspberry Pi) too.
+
+### Changed
+
+- **The panel now opens on the top-left by default** (previously top-right). It
+  remains fully draggable and resizable, and its size is still persisted.
+
+### Fixed
+
+- **NRK's own subtitle briefly flashed at the bottom of the video.** The player
+  (Shaka) paints its caption as a DOM node, which was only hidden reactively
+  after each render matched the cue text, leaving a one-frame flash as each new
+  caption appeared. The overlay now hides Shaka's caption container
+  (`.shaka-text-container`) up-front with CSS while it is expanded, so the native
+  subtitle no longer blinks. This only affects `visibility`/`opacity` (never
+  `track.mode`), so the player keeps streaming cues, and it is fully restored
+  when the panel is collapsed.
+
 ## [0.3.0] - 2026-07-18
 
 ### Fixed

@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "NRK Subtitle Studio",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Loads every NRK TV subtitle into a scrolling, time-synced overlay you can click to seek, translate, and download as .srt.",
   "icons": {
     "16": "public/icons/icon-16.png",
@@ -25,7 +25,9 @@
     "https://tv.nrk.no/*",
     "https://psapi.nrk.no/*",
     "https://*.nrk.no/*",
-    "https://translate.googleapis.com/*"
+    "https://translate.googleapis.com/*",
+    "https://api-free.deepl.com/*",
+    "https://api.deepl.com/*"
   ],
   "web_accessible_resources": [
     {

@@ -10,6 +10,8 @@ import {
   LANGS,
   OVERLAY_ID,
   STORAGE_KEYS,
+  TRANSLATORS,
+  TranslatorProvider,
   UI_LANGS,
   UiLang,
   WINDOW_MIN,
@@ -17,17 +19,19 @@ import {
 import {
   applyPlaybackRate,
   detectSourceLang,
+  setDeeplApiKey,
   setDisplayMode,
   setFontSize,
   setPlaybackRate,
   setTargetLang,
+  setTranslator,
   settings,
   state,
   ui,
 } from "./state";
 import { readStorage, writeStorage } from "./utils";
 import { invalidateRender, render, updateStatus } from "./renderer";
-import { onTranslationConfigChanged } from "./translator";
+import { clearTranslationCache, onTranslationConfigChanged } from "./translator";
 import { applyNativeSubtitleVisibility } from "./native-subtitles";
 import { getUiLang, onUiLangChange, setUiLang, t } from "./i18n";
 import { downloadSrt, hasSubtitles } from "./download";
@@ -76,6 +80,7 @@ overlay.innerHTML = `
       <button class="nsr-btn nsr-btn-text" data-act="toggle" title="Hide subtitle list">Hide</button>
     </span>
   </div>
+  <div class="nsr-notice" role="status" aria-live="polite" hidden></div>
   <div class="nsr-settings" hidden>
     <div class="nsr-settings-title-row"><div class="nsr-settings-title" data-i18n="settings_heading">Settings</div><button class="nsr-settings-close" type="button" title="Close" aria-label="Close">×</button></div>
     <label class="nsr-settings-row">
@@ -84,6 +89,18 @@ overlay.innerHTML = `
         ${UI_LANGS.map((l) => `<option value="${l.code}">${l.name}</option>`).join("")}
       </select>
     </label>
+    <label class="nsr-settings-row">
+      <span data-i18n="setting_translator">Translator</span>
+      <select class="nsr-sel" data-act="set-translator">
+        ${TRANSLATORS.map((p) => `<option value="${p.code}">${p.name}</option>`).join("")}
+      </select>
+    </label>
+    <div class="nsr-settings-row nsr-settings-row-col nsr-row-deepl-key" hidden>
+      <span data-i18n="setting_deepl_key">DeepL API key</span>
+      <input class="nsr-input" type="password" data-act="set-deepl-key" autocomplete="off"
+        autocapitalize="off" autocorrect="off" spellcheck="false"
+        placeholder="Paste your DeepL API key" />
+    </div>
     <label class="nsr-settings-row">
       <span data-i18n="setting_playback_speed">Playback speed</span>
       <select class="nsr-sel" data-act="speed" title="Playback speed">
@@ -426,6 +443,43 @@ uiLangSel.addEventListener("change", () => {
   setUiLang(uiLangSel.value as UiLang);
 });
 
+// ---------- Translator provider + DeepL API key ----------
+const translatorSel = overlay.querySelector('select[data-act="set-translator"]') as HTMLSelectElement;
+const deeplKeyRow = overlay.querySelector(".nsr-row-deepl-key") as HTMLDivElement;
+const deeplKeyInput = overlay.querySelector('input[data-act="set-deepl-key"]') as HTMLInputElement;
+
+translatorSel.value = settings.translator;
+deeplKeyInput.value = settings.deeplApiKey;
+
+function syncDeeplKeyVisibility(): void {
+  deeplKeyRow.hidden = settings.translator !== "deepl";
+}
+syncDeeplKeyVisibility();
+
+translatorSel.addEventListener("change", () => {
+  setTranslator(translatorSel.value as TranslatorProvider);
+  syncDeeplKeyVisibility();
+  // Provider changed → previously cached results belong to the other engine.
+  clearTranslationCache();
+  onTranslationConfigChanged();
+});
+
+// Persist the key as the user types, but only re-translate once they pause, so
+// each keystroke doesn't fire a request. Keep the input from bubbling to the
+// document-level "close panel" / drag handlers.
+let deeplKeyTimer: number | null = null;
+deeplKeyInput.addEventListener("input", () => {
+  setDeeplApiKey(deeplKeyInput.value.trim());
+  clearTranslationCache();
+  if (deeplKeyTimer !== null) clearTimeout(deeplKeyTimer);
+  deeplKeyTimer = self.setTimeout(() => {
+    deeplKeyTimer = null;
+    onTranslationConfigChanged();
+  }, 600);
+});
+deeplKeyInput.addEventListener("keydown", (e) => e.stopPropagation());
+deeplKeyInput.addEventListener("pointerdown", (e) => e.stopPropagation());
+
 // ---------- Download subtitles (.srt) ----------
 // The button appears once subtitles are available. Clicking fetches the full
 // programme subtitles from NRK (translating them when translation is enabled)
@@ -472,6 +526,7 @@ function applyI18n(): void {
   setOptionText(modeSel, "translated", t("mode_translated"));
   setOptionText(modeSel, "bilingual", t("mode_bilingual"));
   speedSel.title = t("playback_speed");
+  deeplKeyInput.placeholder = t("deepl_key_placeholder");
 
   setTitle('button[data-act="font-down"]', t("font_smaller"));
   setTitle('button[data-act="font-up"]', t("font_larger"));

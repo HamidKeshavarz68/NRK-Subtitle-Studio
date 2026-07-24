@@ -11,6 +11,8 @@ import { TRANSLATE, TranslationState } from "./config";
 import { detectSourceLang, isTranslationActive, settings, state } from "./state";
 import { cueText, normalizeWhitespace } from "./utils";
 import { invalidateRender, render, updateStatus } from "./renderer";
+import { showToast } from "./toast";
+import { t } from "./i18n";
 
 declare const chrome: any;
 
@@ -34,14 +36,29 @@ export function getTranslation(idx: number): TranslationEntry | undefined {
 }
 
 const cacheKeyFor = (source: string, target: string, norm: string): string =>
-  `${source}|${target}|${norm}`;
+  `${settings.translator}|${source}|${target}|${norm}`;
 
-/** Proxy a single translate request through the background service worker. */
-function googleTranslate(text: string, source: string, target: string): Promise<string> {
+/** Drop all cached translations (e.g. when the provider or API key changes). */
+export function clearTranslationCache(): void {
+  cache.clear();
+}
+
+// Throttle the DeepL→Google fallback warning so it stays a brief, non-spammy
+// notice even though many batches may fail in quick succession.
+let lastFallbackToastAt = 0;
+function warnDeeplFallback(): void {
+  const now = Date.now();
+  if (now - lastFallbackToastAt < 8000) return;
+  lastFallbackToastAt = now;
+  showToast(t("deepl_fallback"), 7000);
+}
+
+/** Proxy one translate request through the background service worker. */
+function proxyTranslate(payload: Record<string, unknown>): Promise<string> {
   return new Promise((resolve, reject) => {
     try {
       chrome.runtime.sendMessage(
-        { type: "translate", text, source: source || "auto", target },
+        { type: "translate", ...payload },
         (resp: any) => {
           const err = chrome.runtime.lastError;
           if (err) return reject(new Error(err.message || "runtime error"));
@@ -55,6 +72,29 @@ function googleTranslate(text: string, source: string, target: string): Promise<
       reject(e instanceof Error ? e : new Error(String(e)));
     }
   });
+}
+
+/**
+ * Translate via the user-selected provider. When DeepL is selected but its key
+ * is missing or the request fails (wrong key, quota, unsupported language,
+ * network), transparently fall back to the free Google endpoint and surface a
+ * short-lived warning to the user.
+ */
+async function translate(text: string, source: string, target: string): Promise<string> {
+  if (settings.translator === "deepl") {
+    const key = settings.deeplApiKey.trim();
+    if (key) {
+      try {
+        return await proxyTranslate({ provider: "deepl", apiKey: key, text, source, target });
+      } catch (e) {
+        console.warn("[nsr] DeepL failed, falling back to Google", e);
+        warnDeeplFallback();
+      }
+    } else {
+      warnDeeplFallback();
+    }
+  }
+  return proxyTranslate({ provider: "google", text, source: source || "auto", target });
 }
 
 /** Request a translation for the cue at `idx`, if not already known/cached. */
@@ -122,7 +162,7 @@ async function flushBatch(): Promise<void> {
   batchInflight = true;
   lastRequestAt = Date.now();
   try {
-    const out = await googleTranslate(joined, source, target);
+    const out = await translate(joined, source, target);
     if (myReq !== requestId) return;
 
     const parts = splitTranslated(out, indices.length);
@@ -139,7 +179,7 @@ async function flushBatch(): Promise<void> {
         if (myReq !== requestId) return;
         const i = indices[k];
         try {
-          const single = await googleTranslate(lines[k], source, target);
+          const single = await translate(lines[k], source, target);
           translations.set(i, { state: "done", text: single });
           if (norms[k]) cache.set(cacheKeyFor(source, target, norms[k]), single);
         } catch {
@@ -184,7 +224,7 @@ export async function translateTexts(texts: string[]): Promise<string[]> {
     const lines = indices.map((i) => texts[i]);
     const joined = lines.join(TRANSLATE.separator);
     try {
-      const res = await googleTranslate(joined, source, target);
+      const res = await translate(joined, source, target);
       const parts = splitTranslated(res, indices.length);
       if (parts.length === indices.length) {
         indices.forEach((i, k) => {
@@ -198,7 +238,7 @@ export async function translateTexts(texts: string[]): Promise<string[]> {
         for (let k = 0; k < indices.length; k++) {
           const i = indices[k];
           try {
-            const single = (await googleTranslate(texts[i], source, target)).trim();
+            const single = (await translate(texts[i], source, target)).trim();
             out[i] = single;
             const norm = normalizeWhitespace(texts[i]);
             if (norm) cache.set(cacheKeyFor(source, target, norm), single);
