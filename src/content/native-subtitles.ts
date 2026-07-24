@@ -5,10 +5,13 @@
  * (Shaka) only *streams* subtitle segments while its text track is visible, so
  * forcing the track to 'hidden' makes cue loading stop dead — the overlay then
  * freezes on the last-loaded cue while the video plays on. Instead we leave the
- * user-selected track exactly as it is and suppress the *visual* output two
- * ways, both fully reversible:
- *  - a `::cue` stylesheet (covers the browser's native cue renderer), and
- *  - matching NRK's bespoke DOM caption nodes by text and `visibility:hidden`.
+ * user-selected track exactly as it is and suppress the *visual* output, all
+ * fully reversible:
+ *  - a CSS rule that hides both the browser's `::cue` renderer and Shaka's DOM
+ *    caption container (`.shaka-text-container`) up-front, so a freshly painted
+ *    caption never flashes before it is hidden, and
+ *  - as a fallback for any non-standard renderer, matching NRK's DOM caption
+ *    nodes by text and `visibility:hidden`.
  */
 
 import { OVERLAY_ID } from "./config";
@@ -103,16 +106,31 @@ export function hideNativeDomSubtitles(cue: VTTCue | null, t: number): void {
  */
 const CUE_HIDE_STYLE_ID = "nsr-native-cue-hide";
 
+// NRK's player is Shaka, whose DOM text displayer renders captions into a
+// `.shaka-text-container` node (not via `::cue`). Hiding that node reactively
+// (by matching cue text after each render) leaves a one-frame flash as each new
+// caption paints before our JS catches it. Hiding the container up-front with
+// CSS removes the flash entirely, and — because it's only `visibility/opacity`,
+// never `track.mode` — Shaka keeps streaming subtitle segments as normal.
+const NATIVE_CAPTION_SELECTORS = [
+  "video::cue",
+  ".shaka-text-container",
+  ".shaka-text-container *",
+];
+
 function setNativeCueHidden(hidden: boolean): void {
   const existing = document.getElementById(CUE_HIDE_STYLE_ID);
   if (hidden) {
     if (existing) return;
     const style = document.createElement("style");
     style.id = CUE_HIDE_STYLE_ID;
-    // Hide the browser's native cue renderer for every video on the page. The
-    // overlay only mounts on video pages and only while expanded, so this is
-    // scoped in practice and fully removed on collapse.
-    style.textContent = "video::cue{opacity:0!important;visibility:hidden!important;}";
+    // Hide the browser's native cue renderer AND Shaka's DOM caption container
+    // for every video on the page. The overlay only mounts on video pages and
+    // only while expanded, so this is scoped in practice and fully removed on
+    // collapse.
+    style.textContent =
+      NATIVE_CAPTION_SELECTORS.join(",") +
+      "{opacity:0!important;visibility:hidden!important;}";
     (document.head || document.documentElement).appendChild(style);
   } else if (existing) {
     existing.remove();

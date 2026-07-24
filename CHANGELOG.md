@@ -19,6 +19,17 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   the existing service-worker proxy so it works on mobile and ARM devices
   (e.g. Raspberry Pi) too.
 
+### Fixed
+
+- **NRK's own subtitle briefly flashed at the bottom of the video.** The player
+  (Shaka) paints its caption as a DOM node, which was only hidden reactively
+  after each render matched the cue text, leaving a one-frame flash as each new
+  caption appeared. The overlay now hides Shaka's caption container
+  (`.shaka-text-container`) up-front with CSS while it is expanded, so the native
+  subtitle no longer blinks. This only affects `visibility`/`opacity` (never
+  `track.mode`), so the player keeps streaming cues, and it is fully restored
+  when the panel is collapsed.
+
 ## [0.3.0] - 2026-07-18
 
 ### Fixed
