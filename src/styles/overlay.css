@@ -240,7 +240,7 @@
 }
 #nrk-sub-roller .nsr-settings[hidden] { display: none; }
 /* Download row: the button sits at the right, sized to its content. */
-#nrk-sub-roller .nsr-settings-row-download { display: flex; justify-content: flex-end; }
+#nrk-sub-roller .nsr-settings-row.nsr-settings-row-download { justify-content: flex-end; }
 #nrk-sub-roller .nsr-settings-row-download[hidden] { display: none; }
 #nrk-sub-roller .nsr-settings-title {
   font-weight: 600;
