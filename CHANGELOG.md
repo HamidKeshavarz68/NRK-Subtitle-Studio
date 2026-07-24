@@ -6,6 +6,16 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [0.4.1] - 2026-07-24
+
+### Changed
+
+- **Consolidated the toolbar into a single Settings menu.** The separate
+  **Translation** menu and **Download subtitle** button have been merged into the
+  **Settings** menu, which now groups every control in one place: menu language,
+  text size, playback speed, translation display mode, target language, the
+  download subtitle button, translator, and DeepL API key.
+
 ## [0.4.0] - 2026-07-24
 
 ### Added
