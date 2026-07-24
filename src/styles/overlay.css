@@ -4,7 +4,7 @@
   top: 16px;
   left: 16px;
   width: 28vw;
-  height: 70vh;
+  height: 55vh;
   min-width: 240px;
   min-height: 140px;
   max-width: 95vw;
@@ -105,9 +105,8 @@
   text-overflow: ellipsis;
 }
 
-/* Narrow panel: move the Translation/Download/Settings toolbar onto a second
-   full-width row (buttons sharing the width equally) while the Hide button stays
-   up on the first row beside the title and status. */
+/* Narrow panel: move the Settings toolbar onto a second full-width row while
+   the Hide button stays up on the first row beside the title and status. */
 @container (max-width: 380px) {
   #nrk-sub-roller .nsr-actions {
     flex: 1 0 100%;
@@ -224,8 +223,7 @@
   border-color: rgba(255, 255, 255, 0.4);
 }
 
-#nrk-sub-roller .nsr-settings,
-#nrk-sub-roller .nsr-translate-panel {
+#nrk-sub-roller .nsr-settings {
   position: absolute;
   top: 40px;
   right: 8px;
@@ -240,13 +238,10 @@
   flex-direction: column;
   gap: 10px;
 }
-#nrk-sub-roller .nsr-settings[hidden],
-#nrk-sub-roller .nsr-translate-panel[hidden] { display: none; }
-#nrk-sub-roller .nsr-translate-rows {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
+#nrk-sub-roller .nsr-settings[hidden] { display: none; }
+/* Download row: the button sits at the right, sized to its content. */
+#nrk-sub-roller .nsr-settings-row.nsr-settings-row-download { justify-content: flex-end; }
+#nrk-sub-roller .nsr-settings-row-download[hidden] { display: none; }
 #nrk-sub-roller .nsr-settings-title {
   font-weight: 600;
   font-size: 12px;
@@ -311,8 +306,7 @@
   font-weight: bold;
   font-size: 1.1em;
 }
-#nrk-sub-roller .nsr-settings-close,
-#nrk-sub-roller .nsr-translate-close {
+#nrk-sub-roller .nsr-settings-close {
   background: none;
   border: none;
   color: #fff;
@@ -323,9 +317,7 @@
   transition: background 0.15s;
 }
 #nrk-sub-roller .nsr-settings-close:hover,
-#nrk-sub-roller .nsr-settings-close:focus,
-#nrk-sub-roller .nsr-translate-close:hover,
-#nrk-sub-roller .nsr-translate-close:focus {
+#nrk-sub-roller .nsr-settings-close:focus {
   background: rgba(255,255,255,0.12);
 }
 #nrk-sub-roller .nsr-settings-foot {
