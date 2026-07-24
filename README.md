@@ -69,7 +69,7 @@ Then:
    language from the player's CC menu. NRK only downloads a subtitle file
    when the user requests it; once you have, every cue is loaded and stays
    available even if you turn the native subtitles back off.
-5. The panel appears in the top-right. Drag the header to move it. Drag any
+5. The panel appears in the top-left. Drag the header to move it. Drag any
    edge or corner to resize. Click **Hide** to collapse to just the
    toolbar; click **Show** to bring the list back.
 

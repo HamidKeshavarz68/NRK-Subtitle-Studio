@@ -2,7 +2,7 @@
   --nsr-cue-size: 13px;
   position: fixed;
   top: 16px;
-  right: 16px;
+  left: 16px;
   width: 28vw;
   height: 70vh;
   min-width: 240px;
