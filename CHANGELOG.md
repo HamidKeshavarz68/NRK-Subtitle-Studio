@@ -6,6 +6,8 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-07-24
+
 ### Added
 
 - **Choose your translation engine (Google or DeepL).** A new **Translator**
@@ -18,6 +20,11 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   bar directly under the extension's toolbar. The provider and key are persisted locally; everything runs through
   the existing service-worker proxy so it works on mobile and ARM devices
   (e.g. Raspberry Pi) too.
+
+### Changed
+
+- **The panel now opens on the top-left by default** (previously top-right). It
+  remains fully draggable and resizable, and its size is still persisted.
 
 ### Fixed
 
