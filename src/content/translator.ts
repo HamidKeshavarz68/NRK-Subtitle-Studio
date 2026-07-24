@@ -50,7 +50,7 @@ function warnDeeplFallback(): void {
   const now = Date.now();
   if (now - lastFallbackToastAt < 8000) return;
   lastFallbackToastAt = now;
-  showToast(t("deepl_fallback"), 4000);
+  showToast(t("deepl_fallback"), 7000);
 }
 
 /** Proxy one translate request through the background service worker. */

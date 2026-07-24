@@ -80,6 +80,7 @@ overlay.innerHTML = `
       <button class="nsr-btn nsr-btn-text" data-act="toggle" title="Hide subtitle list">Hide</button>
     </span>
   </div>
+  <div class="nsr-notice" role="status" aria-live="polite" hidden></div>
   <div class="nsr-settings" hidden>
     <div class="nsr-settings-title-row"><div class="nsr-settings-title" data-i18n="settings_heading">Settings</div><button class="nsr-settings-close" type="button" title="Close" aria-label="Close">×</button></div>
     <label class="nsr-settings-row">

@@ -1,43 +1,54 @@
 /**
- * Minimal, self-contained toast for short-lived notices (e.g. the DeepL →
- * Google fallback warning). Kept dependency-free (no overlay/renderer imports)
- * so it can be used from the translator without creating an import cycle.
+ * Short-lived notice bar for transient warnings (e.g. the DeepL -> Google
+ * fallback). It renders inside the overlay, directly under the toolbar/header,
+ * so it is clearly part of this extension rather than a detached page toast.
  *
- * The element is fixed-position and reparented into the fullscreen element when
- * needed, so it stays visible over the NRK player in fullscreen too.
+ * Kept dependency-free of overlay/renderer (it only looks the elements up in the
+ * DOM by id/class) so the translator can call it without creating an import
+ * cycle. Because the bar lives inside the overlay, it also follows the overlay
+ * into the fullscreen subtree automatically.
  */
 
-const TOAST_ID = "nrk-sub-roller-toast";
+import { OVERLAY_ID } from "./config";
 
-let toastEl: HTMLDivElement | null = null;
 let hideTimer: number | null = null;
 
-function ensureToast(): HTMLDivElement {
-  if (toastEl && toastEl.isConnected) return toastEl;
-  const el = document.createElement("div");
-  el.id = TOAST_ID;
-  el.setAttribute("role", "status");
-  el.setAttribute("aria-live", "polite");
-  toastEl = el;
+/** The notice element declared in the overlay markup (created lazily if absent). */
+function getNoticeEl(): HTMLElement | null {
+  const overlay = document.getElementById(OVERLAY_ID);
+  if (!overlay) return null;
+  let el = overlay.querySelector<HTMLElement>(".nsr-notice");
+  if (!el) {
+    el = document.createElement("div");
+    el.className = "nsr-notice";
+    el.setAttribute("role", "status");
+    el.setAttribute("aria-live", "polite");
+    el.hidden = true;
+    const header = overlay.querySelector(".nsr-header");
+    if (header && header.nextSibling) overlay.insertBefore(el, header.nextSibling);
+    else overlay.appendChild(el);
+  }
   return el;
 }
 
-/** Show a brief message for `durationMs`, then fade out. */
-export function showToast(message: string, durationMs = 4000): void {
-  const el = ensureToast();
+/** Show a brief message under the toolbar for `durationMs`, then hide it. */
+export function showToast(message: string, durationMs = 7000): void {
+  const el = getNoticeEl();
+  if (!el) return;
+
   el.textContent = message;
-
-  // Reparent into the fullscreen subtree (if any) so it renders on top.
-  const home = (document.fullscreenElement as HTMLElement | null) ?? document.documentElement;
-  if (el.parentElement !== home) home.appendChild(el);
-
+  el.hidden = false;
   // Force reflow so the fade-in transition runs on re-shows.
   void el.offsetWidth;
-  el.classList.add("nsr-toast-show");
+  el.classList.add("nsr-notice-show");
 
   if (hideTimer !== null) clearTimeout(hideTimer);
   hideTimer = self.setTimeout(() => {
     hideTimer = null;
-    el.classList.remove("nsr-toast-show");
+    el.classList.remove("nsr-notice-show");
+    // Wait for the fade-out before removing it from layout.
+    self.setTimeout(() => {
+      if (!el.classList.contains("nsr-notice-show")) el.hidden = true;
+    }, 220);
   }, Math.max(1000, durationMs));
 }

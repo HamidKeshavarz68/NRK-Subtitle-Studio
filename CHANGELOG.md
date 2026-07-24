@@ -14,8 +14,8 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   field to paste your DeepL API key (free `:fx` and Pro keys both work — the
   correct endpoint is chosen automatically). If the key is missing, wrong, out of
   quota, or the target language isn't supported by DeepL, translation
-  transparently falls back to free Google Translate and shows a brief on-screen
-  warning. The provider and key are persisted locally; everything runs through
+  transparently falls back to free Google Translate and shows a 7-second warning
+  bar directly under the extension's toolbar. The provider and key are persisted locally; everything runs through
   the existing service-worker proxy so it works on mobile and ARM devices
   (e.g. Raspberry Pi) too.
 
