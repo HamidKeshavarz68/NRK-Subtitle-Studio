@@ -239,10 +239,9 @@
   gap: 10px;
 }
 #nrk-sub-roller .nsr-settings[hidden] { display: none; }
-/* Download row: the button spans the full width of the settings panel. */
-#nrk-sub-roller .nsr-settings-row-download { display: flex; }
+/* Download row: the button sits at the right, sized to its content. */
+#nrk-sub-roller .nsr-settings-row-download { display: flex; justify-content: flex-end; }
 #nrk-sub-roller .nsr-settings-row-download[hidden] { display: none; }
-#nrk-sub-roller .nsr-download-btn { width: 100%; height: 28px; }
 #nrk-sub-roller .nsr-settings-title {
   font-weight: 600;
   font-size: 12px;
