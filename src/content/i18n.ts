@@ -14,6 +14,9 @@ export type MessageKey =
   | "status_waiting"
   | "translate_to"
   | "display_mode"
+  | "view_mode"
+  | "view_rolling"
+  | "view_single"
   | "mode_original"
   | "mode_translated"
   | "mode_bilingual"
@@ -30,6 +33,7 @@ export type MessageKey =
   | "no_translation"
   | "setting_target_lang"
   | "setting_display_mode"
+  | "setting_view_mode"
   | "settings_open"
   | "settings_heading"
   | "download"
@@ -54,6 +58,9 @@ const MESSAGES: Record<UiLang, Messages> = {
     status_waiting: "waiting…",
     translate_to: "Translate to…",
     display_mode: "Display mode",
+    view_mode: "Subtitle view",
+    view_rolling: "Rolling list",
+    view_single: "Single line (NRK)",
     mode_original: "Original",
     mode_translated: "Translated",
     mode_bilingual: "Bilingual",
@@ -72,6 +79,7 @@ const MESSAGES: Record<UiLang, Messages> = {
     no_translation: "— No translation —",
     setting_target_lang: "Translate to",
     setting_display_mode: "Display mode",
+    setting_view_mode: "Subtitle view",
     settings_open: "Settings",
     settings_heading: "Settings",
     download: "Download subtitle",
@@ -93,6 +101,9 @@ const MESSAGES: Record<UiLang, Messages> = {
     status_waiting: "venter…",
     translate_to: "Oversett til…",
     display_mode: "Visningsmodus",
+    view_mode: "Undertekstvisning",
+    view_rolling: "Rullende liste",
+    view_single: "Én linje (NRK)",
     mode_original: "Original",
     mode_translated: "Oversatt",
     mode_bilingual: "Tospråklig",
@@ -111,6 +122,7 @@ const MESSAGES: Record<UiLang, Messages> = {
     no_translation: "— Ingen oversettelse —",
     setting_target_lang: "Oversett til",
     setting_display_mode: "Visningsmodus",
+    setting_view_mode: "Undertekstvisning",
     settings_open: "Innstillinger",
     settings_heading: "Innstillinger",
     download: "Last ned undertekst",

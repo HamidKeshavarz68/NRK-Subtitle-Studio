@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "NRK Subtitle Studio",
-  "version": "0.4.1",
-  "description": "Loads every NRK TV subtitle into a scrolling, time-synced overlay you can click to seek, translate, and download as .srt.",
+  "version": "0.5.0",
+  "description": "Turn NRK TV into a Norwegian-learning tool: read every subtitle in a click-to-seek, time-synced overlay, or keep NRK's single on-video caption — with inline translation (Google Translate or DeepL), bilingual view, adjustable text size, and one-click .srt download.",
   "icons": {
     "16": "public/icons/icon-16.png",
     "32": "public/icons/icon-32.png",

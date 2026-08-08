@@ -3,6 +3,15 @@
  */
 
 export type DisplayMode = "original" | "translated" | "bilingual";
+
+/**
+ * How subtitles are shown:
+ *  - "rolling": the extension's scrolling window with past/upcoming cues.
+ *  - "single": the extension window is hidden and NRK's own native single-line
+ *    subtitle UI is used instead.
+ */
+export type ViewMode = "rolling" | "single";
+
 export type TranslationState = "pending" | "done" | "error";
 export type UiLang = "en" | "no";
 
@@ -34,6 +43,7 @@ export const STORAGE_KEYS = {
   playbackRate: "nsr.playbackRate",
   targetLang: "nsr.targetLang",
   displayMode: "nsr.displayMode",
+  viewMode: "nsr.viewMode",
   uiLang: "nsr.uiLang",
   translator: "nsr.translator",
   deeplApiKey: "nsr.deeplApiKey",
