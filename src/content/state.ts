@@ -6,7 +6,7 @@
  * persistence so callers never have to touch storage directly.
  */
 
-import { DisplayMode, FONT, SPEED, STORAGE_KEYS, TranslatorProvider, DEFAULT_TRANSLATOR } from "./config";
+import { DisplayMode, ViewMode, FONT, SPEED, STORAGE_KEYS, TranslatorProvider, DEFAULT_TRANSLATOR } from "./config";
 import { clamp, readStorage, writeStorage } from "./utils";
 
 export interface AppState {
@@ -21,18 +21,13 @@ export const state: AppState = {
   cues: [],
 };
 
-/** Transient UI flags (not persisted). */
-export const ui = {
-  /** Whether the subtitle list is expanded (vs. collapsed to the toolbar). */
-  isExpanded: true,
-};
-
 export const clampFont = (n: number): number => clamp(n, FONT.min, FONT.max);
 export const clampSpeed = (n: number): number => clamp(n, SPEED.min, SPEED.max);
 
 export interface Settings {
   targetLang: string;
   displayMode: DisplayMode;
+  viewMode: ViewMode;
   fontSize: number;
   playbackRate: number;
   translator: TranslatorProvider;
@@ -46,6 +41,7 @@ function readTranslator(): TranslatorProvider {
 export const settings: Settings = {
   targetLang: readStorage(STORAGE_KEYS.targetLang) || "off",
   displayMode: (readStorage(STORAGE_KEYS.displayMode) as DisplayMode) || "original",
+  viewMode: readStorage(STORAGE_KEYS.viewMode) === "single" ? "single" : "rolling",
   fontSize: clampFont(parseInt(readStorage(STORAGE_KEYS.fontSize) || "", 10) || FONT.default),
   playbackRate: clampSpeed(parseFloat(readStorage(STORAGE_KEYS.playbackRate) || "") || SPEED.default),
   translator: readTranslator(),
@@ -70,6 +66,11 @@ export function setTargetLang(lang: string): void {
 export function setDisplayMode(mode: DisplayMode): void {
   settings.displayMode = mode;
   writeStorage(STORAGE_KEYS.displayMode, mode);
+}
+
+export function setViewMode(mode: ViewMode): void {
+  settings.viewMode = mode;
+  writeStorage(STORAGE_KEYS.viewMode, mode);
 }
 
 export function setFontSize(size: number): void {

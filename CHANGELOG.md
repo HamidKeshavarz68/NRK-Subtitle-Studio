@@ -4,7 +4,38 @@ All notable changes to this project will be documented in this file. The format
 is loosely based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and
 this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.5.0] - 2026-08-09
+
+### Added
+
+- **New "Single line (NRK)" subtitle view.** A **Subtitle view** setting lets you
+  switch between the extension's rolling list and a single-line subtitle. In
+  single-line mode the extension window is hidden and NRK's own native caption is
+  used: with **Display mode** set to *Original* it is shown untouched, while
+  *Translated* / *Bilingual* replace NRK's on-video caption with a translated one
+  in the same spot so it looks native. NRK's own caption text is only hidden via
+  CSS, never edited, so seeking never freezes it. In *Bilingual* the original and
+  translation are shown as two equally-weighted lines on distinctly tinted boxes;
+  the translation line reserves its space and is revealed in place — combined with
+  pre-translating upcoming cues — so the text never flashes or jumps. The injected
+  caption matches NRK's own font size (and honours the **Text size** control), and
+  automatically lifts above the player controls while they are visible. The
+  player-bar button and settings menu stay available so you can switch back at any
+  time.
+
+### Changed
+
+- **Moved the Settings menu into the video player's control bar.** The overlay's
+  header **Settings** button has been replaced by a button injected into the
+  NRK player's control bar (bottom-right, to the left of the caption and
+  fullscreen buttons). It shows the extension's own icon and opens the settings
+  menu as a popover anchored to it.
+- **Moved the `no → en` status indicator into the player control bar,** sitting
+  directly to the left of the extension's button.
+- **Simplified the overlay window.** The title bar is now a slim header showing
+  just the extension icon and name, which doubles as the drag handle so it is
+  obvious the window can be moved. The old **Hide** / collapse control was
+  removed.
 
 ## [0.4.1] - 2026-07-24
 

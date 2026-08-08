@@ -1,6 +1,6 @@
 {
   "name": "nrk-subtitle-studio",
-  "version": "0.4.1",
+  "version": "0.5.0",
   "private": true,
   "description": "Chrome extension that loads every NRK TV subtitle into a scrolling, time-synced overlay you can click to seek, translate with Google Translate, and download as an .srt file. Great for learning Norwegian.",
   "license": "MIT",

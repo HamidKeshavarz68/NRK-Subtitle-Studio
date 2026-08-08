@@ -24,9 +24,9 @@ function getNoticeEl(): HTMLElement | null {
     el.setAttribute("role", "status");
     el.setAttribute("aria-live", "polite");
     el.hidden = true;
-    const header = overlay.querySelector(".nsr-header");
-    if (header && header.nextSibling) overlay.insertBefore(el, header.nextSibling);
-    else overlay.appendChild(el);
+    // The notice belongs at the very top of the overlay (there is no longer a
+    // header to anchor beneath).
+    overlay.insertBefore(el, overlay.firstChild);
   }
   return el;
 }
