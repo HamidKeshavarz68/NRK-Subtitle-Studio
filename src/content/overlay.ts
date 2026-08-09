@@ -91,6 +91,7 @@ overlay.innerHTML = `
       <span data-i18n="setting_font_size">Text size</span>
       <span class="nsr-group nsr-group-font">
         <button class="nsr-btn" type="button" data-act="font-down" title="Smaller text">A−</button>
+        <span class="nsr-font-value" data-act="font-value" aria-live="polite">12</span>
         <button class="nsr-btn" type="button" data-act="font-up" title="Larger text">A+</button>
       </span>
     </div>
@@ -206,8 +207,10 @@ document.addEventListener("fullscreenchange", syncFullscreenParent);
 document.addEventListener("webkitfullscreenchange", syncFullscreenParent as EventListener);
 
 // ---------- Font size ----------
+const fontValueEl = overlay.querySelector('[data-act="font-value"]') as HTMLElement | null;
 function renderFontSize(): void {
   overlay.style.setProperty("--nsr-cue-size", settings.fontSize + "px");
+  if (fontValueEl) fontValueEl.textContent = String(settings.fontSize);
 }
 renderFontSize();
 
