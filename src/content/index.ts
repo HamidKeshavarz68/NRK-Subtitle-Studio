@@ -6,27 +6,31 @@
  * keeps the overlay attached to the current <video>.
  *
  * Modules:
- *  - config            shared constants, language list and types
- *  - utils             pure helpers (strip/normalize/escape/time/storage)
- *  - state             shared state + persisted settings
- *  - translator        Google Translate proxy + coalesced batch engine
- *  - native-subtitles  hide/restore NRK's native captions
- *  - renderer          status line + rolling-window render
- *  - overlay           overlay DOM, toolbar controls, drag/resize, seek
- *  - video             video/track discovery, attach/detach, cue snapshots
+ *  - core/             configuration, shared state and pure helpers
+ *  - platform/         browser-extension runtime adapter
+ *  - subtitles/        track discovery, native captions, remote files and export
+ *  - translation/      translation proxy and coalesced batch engine
+ *  - ui/               overlay, rendering and player controls
  */
 
-import { VIDEO_PAGE_RE } from "./config";
-import { state } from "./state";
-import { overlay, syncFullscreenParent, closeSettings, settingsHost } from "./overlay";
-import { applyNativeSubtitleVisibility, clearNativeSubtitleHiding } from "./native-subtitles";
-import { stopTranslations } from "./translator";
-import { attachToVideo, detachVideo, findVideo, scanTextTracks } from "./video";
-import { resetAccumulatedCues } from "./download";
-import { injectSettingsButton, removePlayerButton } from "./player-controls";
+import { VIDEO_PAGE_RE } from "./core/config";
+import { state } from "./core/state";
+import { overlay, syncFullscreenParent } from "./ui/overlay";
+import { settingsHost } from "./ui/elements";
+import { closeSettings } from "./ui/settings-popover";
+import {
+  applyNativeSubtitleVisibility,
+  clearNativeSubtitleHiding,
+} from "./subtitles/native-subtitles";
+import { stopTranslations } from "./translation/translator";
+import { attachToVideo, detachVideo, findVideo, scanTextTracks } from "./subtitles/video";
+import { resetAccumulatedCues } from "./subtitles/download";
+import { injectSettingsButton, removePlayerButton } from "./ui/player-controls";
 
-if (!(window as any).__nrkSubtitleStudioLoaded) {
-  (window as any).__nrkSubtitleStudioLoaded = true;
+const pageWindow = window as Window & { __nrkSubtitleStudioLoaded?: boolean };
+
+if (!pageWindow.__nrkSubtitleStudioLoaded) {
+  pageWindow.__nrkSubtitleStudioLoaded = true;
   bootstrap();
 }
 
@@ -69,16 +73,22 @@ function bootstrap(): void {
   const fireNavigation = () => queueMicrotask(mountIfNeeded);
   const origPush = history.pushState;
   const origReplace = history.replaceState;
-  history.pushState = function (this: History, ...args: any[]) {
-    const r = origPush.apply(this, args as any);
+  history.pushState = function (
+    this: History,
+    ...args: Parameters<History["pushState"]>
+  ): ReturnType<History["pushState"]> {
+    const r = origPush.apply(this, args);
     fireNavigation();
     return r;
-  } as typeof history.pushState;
-  history.replaceState = function (this: History, ...args: any[]) {
-    const r = origReplace.apply(this, args as any);
+  };
+  history.replaceState = function (
+    this: History,
+    ...args: Parameters<History["replaceState"]>
+  ): ReturnType<History["replaceState"]> {
+    const r = origReplace.apply(this, args);
     fireNavigation();
     return r;
-  } as typeof history.replaceState;
+  };
   window.addEventListener("popstate", fireNavigation);
   window.addEventListener("hashchange", fireNavigation);
 

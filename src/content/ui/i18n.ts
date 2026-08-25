@@ -7,8 +7,8 @@
  * listener) whenever the language changes.
  */
 
-import { DEFAULT_UI_LANG, STORAGE_KEYS, UiLang } from "./config";
-import { readStorage, writeStorage } from "./utils";
+import { DEFAULT_UI_LANG, STORAGE_KEYS, UiLang } from "../core/config";
+import { readStorage, writeStorage } from "../core/utils";
 
 export type MessageKey =
   | "status_waiting"

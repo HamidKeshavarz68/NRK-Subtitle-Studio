@@ -7,28 +7,15 @@
  * translation requests through here.
  */
 
-declare const chrome: any;
+import type { RuntimeRequest } from "../shared/extension/messages";
+import { runtime } from "../shared/extension/runtime";
 
-type TranslateRequest = {
-  type: "translate";
-  text?: unknown;
-  source?: unknown;
-  target?: unknown;
-  provider?: unknown;
-  apiKey?: unknown;
-};
-
-type NrkFetchRequest = {
-  type: "nrk-fetch";
-  url?: unknown;
-};
-
-function isTranslateRequest(msg: unknown): msg is TranslateRequest {
-  return !!msg && typeof msg === "object" && (msg as { type?: unknown }).type === "translate";
-}
-
-function isNrkFetchRequest(msg: unknown): msg is NrkFetchRequest {
-  return !!msg && typeof msg === "object" && (msg as { type?: unknown }).type === "nrk-fetch";
+function hasMessageType<T extends RuntimeRequest["type"]>(
+  message: unknown,
+  type: T
+): message is Record<string, unknown> & { type: T } {
+  return !!message && typeof message === "object" &&
+    (message as Record<string, unknown>).type === type;
 }
 
 /** Only NRK-owned hosts may be proxied, to keep this a narrow, safe helper. */
@@ -119,8 +106,8 @@ async function deeplTranslate(text: string, target: string, apiKey: string): Pro
   return translations.map((t) => String(t?.text ?? "")).join(DEEPL_SEPARATOR);
 }
 
-chrome.runtime.onMessage.addListener((msg: unknown, _sender: unknown, sendResponse: (resp: any) => void) => {
-  if (isNrkFetchRequest(msg)) {
+runtime.onMessage.addListener((msg: unknown, _sender: unknown, sendResponse) => {
+  if (hasMessageType(msg, "nrk-fetch")) {
     (async () => {
       try {
         const url = String(msg.url ?? "");
@@ -138,7 +125,7 @@ chrome.runtime.onMessage.addListener((msg: unknown, _sender: unknown, sendRespon
     return true;
   }
 
-  if (!isTranslateRequest(msg)) return;
+  if (!hasMessageType(msg, "translate")) return;
 
   (async () => {
     try {
@@ -175,4 +162,3 @@ chrome.runtime.onMessage.addListener((msg: unknown, _sender: unknown, sendRespon
   // Keep the message channel open for the async sendResponse.
   return true;
 });
-

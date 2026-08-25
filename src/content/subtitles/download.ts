@@ -14,10 +14,10 @@
  *     .srt as translated-only or bilingual output (matching the display mode).
  */
 
-import { isTranslationActive, settings, state } from "./state";
-import { cueText } from "./utils";
+import { isTranslationActive, settings, state } from "../core/state";
+import { cueText } from "../core/utils";
 import { fetchFullSubtitles, RemoteCue } from "./remote-subtitles";
-import { translateTexts } from "./translator";
+import { translateTexts } from "../translation/translator";
 
 /** Every distinct cue seen so far from the player, keyed by start time. */
 const accumulated = new Map<string, RemoteCue>();
