@@ -284,10 +284,12 @@ NRK-Subtitle-Studio/
     │   └── ui/
     │       ├── elements.ts    Overlay DOM construction and element references
     │       ├── i18n.ts        English/Norwegian UI messages
-    │       ├── overlay.ts     Settings, drag, resize and direct interactions
+    │       ├── overlay.ts     Settings controls and UI coordination
     │       ├── player-controls.ts NRK player-button integration
     │       ├── renderer.ts    Rolling and single-caption rendering
-    │       └── toast.ts       Short-lived notices
+    │       ├── settings-popover.ts Popover mounting and positioning
+    │       ├── toast.ts       Short-lived notices
+    │       └── window-interactions.ts Drag, resize and size persistence
     ├── shared/
     │   └── extension/
     │       ├── messages.ts    Shared request/response contracts

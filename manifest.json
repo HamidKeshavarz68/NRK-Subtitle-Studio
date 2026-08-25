@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "NRK Subtitle Studio",
-  "version": "0.5.1",
+  "version": "0.5.2",
   "description": "Learn Norwegian while watching NRK TV: click-to-seek subtitles, live translation, bilingual captions, and .srt export.",
   "icons": {
     "16": "public/icons/icon-16.png",
@@ -36,4 +36,3 @@
     }
   ]
 }
-

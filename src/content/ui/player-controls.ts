@@ -13,7 +13,7 @@
  * The button shows the extension's own icon so it clearly belongs to us.
  */
 
-import { closeSettings, isSettingsOpen, toggleSettings } from "./overlay";
+import { closeSettings, isSettingsOpen, toggleSettings } from "./settings-popover";
 import { statusEl } from "./elements";
 import { onUiLangChange, t } from "./i18n";
 import { runtime } from "../../shared/extension/runtime";

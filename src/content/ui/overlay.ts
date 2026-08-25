@@ -9,10 +9,8 @@ import {
   ViewMode,
   FONT,
   LANGS,
-  STORAGE_KEYS,
   TranslatorProvider,
   UiLang,
-  WINDOW_MIN,
 } from "../core/config";
 import {
   applyPlaybackRate,
@@ -28,7 +26,6 @@ import {
   settings,
   state,
 } from "../core/state";
-import { readStorage, writeStorage } from "../core/utils";
 import { invalidateRender, render, updateStatus } from "./renderer";
 import { clearTranslationCache, onTranslationConfigChanged } from "../translation/translator";
 import { getUiLang, onUiLangChange, setUiLang, t } from "./i18n";
@@ -39,9 +36,13 @@ import {
   listEl,
   overlay,
   settingsHost,
-  settingsPanel,
   statusEl,
 } from "./elements";
+import { initializeOverlayWindow } from "./window-interactions";
+import {
+  mountSettingsPanel,
+  syncSettingsHostParent,
+} from "./settings-popover";
 
 export { listEl, overlay, settingsHost, statusEl } from "./elements";
 
@@ -55,12 +56,7 @@ export function syncFullscreenParent(): void {
   if (overlay.parentElement !== target) {
     target.appendChild(overlay);
   }
-  if (settingsHost.parentElement !== target) {
-    target.appendChild(settingsHost);
-  }
-  // Positioning is anchored to the (per-player) button, which is torn down and
-  // rebuilt across fullscreen transitions, so drop any open popover.
-  if (!settingsHost.hidden) closeSettings();
+  syncSettingsHostParent(target);
 }
 document.addEventListener("fullscreenchange", syncFullscreenParent);
 document.addEventListener("webkitfullscreenchange", syncFullscreenParent as EventListener);
@@ -87,50 +83,6 @@ overlay.querySelector('button[data-act="font-down"]')?.addEventListener("click",
   render();
 });
 
-// ---------- Window size (persisted) ----------
-// Only apply saved size if it meets a reasonable minimum; otherwise let the
-// CSS default (viewport-relative) take effect.
-const SIZE_MIN_THRESHOLD = { w: 400, h: 500 };
-
-function loadSize(): { w: number; h: number } | null {
-  try {
-    const raw = readStorage(STORAGE_KEYS.size);
-    if (!raw) return null;
-    const o = JSON.parse(raw);
-    if (typeof o?.w === "number" && typeof o?.h === "number") {
-      if (o.w >= SIZE_MIN_THRESHOLD.w && o.h >= SIZE_MIN_THRESHOLD.h) {
-        return o;
-      }
-    }
-  } catch {
-    // ignore
-  }
-  return null;
-}
-const savedSize = loadSize();
-if (savedSize) {
-  overlay.style.width = savedSize.w + "px";
-  overlay.style.height = savedSize.h + "px";
-}
-
-// Persist size changes, but not while collapsed (height is "auto" then and we
-// don't want to overwrite the user's preferred expanded height).
-let resizeSaveTimer: number | null = null;
-let suppressSizeSave = false;
-const ro = new ResizeObserver(() => {
-  if (suppressSizeSave || resizeSaveTimer !== null) return;
-  resizeSaveTimer = self.setTimeout(() => {
-    resizeSaveTimer = null;
-    if (suppressSizeSave) return;
-    const r = overlay.getBoundingClientRect();
-    writeStorage(STORAGE_KEYS.size, JSON.stringify({
-      w: Math.round(r.width),
-      h: Math.round(r.height),
-    }));
-  }, 150);
-});
-ro.observe(overlay);
-
 // ---------- Playback speed ----------
 const speedSel = overlay.querySelector('select[data-act="speed"]') as HTMLSelectElement;
 speedSel.value = String(settings.playbackRate);
@@ -138,81 +90,10 @@ speedSel.addEventListener("change", () => {
   setPlaybackRate(parseFloat(speedSel.value) || 1);
 });
 
-// ---------- Custom resize from any edge / corner ----------
-// Eight invisible handles translate pointer drags into width/height/top/left.
-// Pointer events (with pointer capture) make this work for mouse, touch and
-// pen alike, so resize works on Android extension browsers too.
-overlay.querySelectorAll<HTMLElement>(".nsr-rh").forEach((handle) => {
-  handle.addEventListener("pointerdown", (e: PointerEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    const dir = handle.dataset.dir || "";
-    const start = overlay.getBoundingClientRect();
-    const sx = e.clientX;
-    const sy = e.clientY;
-    const pointerId = e.pointerId;
-    const maxW = Math.min(window.innerWidth * 0.95, window.innerWidth - 4);
-    const maxH = Math.min(window.innerHeight * 0.95, window.innerHeight - 4);
-
-    const onMove = (ev: PointerEvent) => {
-      if (ev.pointerId !== pointerId) return;
-      const dx = ev.clientX - sx;
-      const dy = ev.clientY - sy;
-      let left = start.left;
-      let top = start.top;
-      let w = start.width;
-      let h = start.height;
-
-      if (dir.includes("e")) w = start.width + dx;
-      if (dir.includes("s")) h = start.height + dy;
-      if (dir.includes("w")) { w = start.width - dx; left = start.left + dx; }
-      if (dir.includes("n")) { h = start.height - dy; top = start.top + dy; }
-
-      // Clamp width
-      if (w < WINDOW_MIN.width) {
-        if (dir.includes("w")) left -= WINDOW_MIN.width - w;
-        w = WINDOW_MIN.width;
-      }
-      if (w > maxW) {
-        if (dir.includes("w")) left += w - maxW;
-        w = maxW;
-      }
-      // Clamp height
-      if (h < WINDOW_MIN.height) {
-        if (dir.includes("n")) top -= WINDOW_MIN.height - h;
-        h = WINDOW_MIN.height;
-      }
-      if (h > maxH) {
-        if (dir.includes("n")) top += h - maxH;
-        h = maxH;
-      }
-      // Keep on screen
-      if (left < 0) { w += left; left = 0; }
-      if (top < 0) { h += top; top = 0; }
-      if (left + w > window.innerWidth) w = window.innerWidth - left;
-      if (top + h > window.innerHeight) h = window.innerHeight - top;
-
-      // Switch positioning to top/left so it stays put.
-      overlay.style.right = "auto";
-      overlay.style.bottom = "auto";
-      overlay.style.left = left + "px";
-      overlay.style.top = top + "px";
-      overlay.style.width = w + "px";
-      overlay.style.height = h + "px";
-    };
-    const onUp = (ev: PointerEvent) => {
-      if (ev.pointerId !== pointerId) return;
-      handle.removeEventListener("pointermove", onMove);
-      handle.removeEventListener("pointerup", onUp);
-      handle.removeEventListener("pointercancel", onUp);
-      // The ResizeObserver above persists the new size.
-    };
-    try { handle.setPointerCapture(pointerId); } catch { /* ignore */ }
-    handle.addEventListener("pointermove", onMove);
-    handle.addEventListener("pointerup", onUp);
-    handle.addEventListener("pointercancel", onUp);
-  });
-});
+initializeOverlayWindow(
+  overlay,
+  overlay.querySelector(".nsr-header") as HTMLElement
+);
 
 // ---------- Translation selects ----------
 const langSel = overlay.querySelector('select[data-act="lang"]') as HTMLSelectElement;
@@ -306,85 +187,6 @@ viewSel.addEventListener("change", () => {
 const uiLangSel = overlay.querySelector('select[data-act="set-uilang"]') as HTMLSelectElement;
 
 uiLangSel.value = getUiLang();
-
-// The gear button injected into the player control bar (see player-controls.ts)
-// anchors the popover; `settingsAnchor` remembers it so we can clear its active
-// state and re-close cleanly on outside clicks.
-let settingsAnchor: HTMLElement | null = null;
-
-function reparentSettingsHost(): void {
-  const target = (document.fullscreenElement as HTMLElement | null) ?? document.documentElement;
-  if (settingsHost.parentElement !== target) target.appendChild(settingsHost);
-}
-
-function positionSettingsHost(anchor: HTMLElement | null): void {
-  if (!anchor || !anchor.isConnected) {
-    // No/stale anchor → park it in the bottom-right corner of the viewport.
-    settingsHost.style.left = "auto";
-    settingsHost.style.top = "auto";
-    settingsHost.style.right = "16px";
-    settingsHost.style.bottom = "64px";
-    return;
-  }
-  settingsHost.style.right = "auto";
-  settingsHost.style.bottom = "auto";
-  const a = anchor.getBoundingClientRect();
-  const p = settingsHost.getBoundingClientRect();
-  const gap = 8;
-  let left = a.right - p.width; // right-align the popover to the button
-  let top = a.top - p.height - gap; // open upward (the button sits at the bottom)
-  if (top < 8) top = a.bottom + gap; // not enough room above → drop below
-  left = Math.max(8, Math.min(left, window.innerWidth - p.width - 8));
-  top = Math.max(8, Math.min(top, window.innerHeight - p.height - 8));
-  settingsHost.style.left = Math.round(left) + "px";
-  settingsHost.style.top = Math.round(top) + "px";
-}
-
-export function isSettingsOpen(): boolean {
-  return !settingsHost.hidden;
-}
-
-export function openSettings(anchor?: HTMLElement | null): void {
-  reparentSettingsHost();
-  settingsAnchor = anchor ?? null;
-  // Measure while invisible so the popover never flashes at a stale position.
-  settingsHost.style.visibility = "hidden";
-  settingsHost.hidden = false;
-  positionSettingsHost(settingsAnchor);
-  settingsHost.style.visibility = "";
-  if (settingsAnchor) settingsAnchor.classList.add("nsr-player-btn-active");
-}
-
-export function closeSettings(): void {
-  settingsHost.hidden = true;
-  if (settingsAnchor) settingsAnchor.classList.remove("nsr-player-btn-active");
-  settingsAnchor = null;
-}
-
-export function toggleSettings(anchor?: HTMLElement | null): void {
-  if (isSettingsOpen()) closeSettings();
-  else openSettings(anchor);
-}
-
-// Keep clicks inside the panel from bubbling to the document-level close.
-settingsPanel.addEventListener("click", (e) => e.stopPropagation());
-
-// Settings close button.
-const settingsCloseBtn = overlay.querySelector('.nsr-settings-close') as HTMLButtonElement;
-if (settingsCloseBtn) {
-  settingsCloseBtn.addEventListener('click', (e) => {
-    e.stopPropagation();
-    closeSettings();
-  });
-}
-// Close when clicking anywhere else.
-document.addEventListener("click", () => {
-  if (isSettingsOpen()) closeSettings();
-});
-// Re-anchor on viewport changes so the popover keeps hugging the button.
-window.addEventListener("resize", () => {
-  if (isSettingsOpen()) positionSettingsHost(settingsAnchor);
-});
 
 uiLangSel.addEventListener("change", () => {
   setUiLang(uiLangSel.value as UiLang);
@@ -528,42 +330,6 @@ listEl.addEventListener("click", (e) => {
   if (!isNaN(s)) state.video.currentTime = s;
 });
 
-// ---------- Dragging ----------
-// The overlay is dragged by its header bar (the extension icon + name), which
-// makes the drag affordance obvious.
-makeDraggable(overlay, overlay.querySelector(".nsr-header") as HTMLElement);
-
-function makeDraggable(el: HTMLElement, handle: HTMLElement): void {
-  let dragging = false;
-  let sx = 0, sy = 0, ox = 0, oy = 0, pointerId = -1;
-  handle.addEventListener("pointerdown", (e: PointerEvent) => {
-    // Don't drag when clicking interactive controls.
-    const tag = (e.target as HTMLElement).tagName;
-    if (tag === "BUTTON" || tag === "SELECT" || tag === "OPTION") return;
-    dragging = true;
-    pointerId = e.pointerId;
-    sx = e.clientX; sy = e.clientY;
-    const r = el.getBoundingClientRect();
-    ox = r.left; oy = r.top;
-    el.style.right = "auto";
-    el.style.bottom = "auto";
-    try { handle.setPointerCapture(pointerId); } catch { /* ignore */ }
-    e.preventDefault();
-  });
-  handle.addEventListener("pointermove", (e: PointerEvent) => {
-    if (!dragging || e.pointerId !== pointerId) return;
-    el.style.left = Math.max(0, ox + e.clientX - sx) + "px";
-    el.style.top = Math.max(0, oy + e.clientY - sy) + "px";
-  });
-  const end = (e: PointerEvent) => {
-    if (e.pointerId !== pointerId) return;
-    dragging = false;
-    pointerId = -1;
-  };
-  handle.addEventListener("pointerup", end);
-  handle.addEventListener("pointercancel", end);
-}
-
 // Re-apply the persisted playback rate if/when a video is present.
 applyPlaybackRate();
 
@@ -571,5 +337,4 @@ applyPlaybackRate();
 // init-time `overlay.querySelector(...)` lookup above has resolved against it
 // while it still lived inside the overlay. From here on it renders as an
 // anchored popover (see openSettings / player-controls.ts).
-settingsPanel.hidden = false;
-settingsHost.appendChild(settingsPanel);
+mountSettingsPanel();

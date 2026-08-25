@@ -15,7 +15,9 @@
 
 import { VIDEO_PAGE_RE } from "./core/config";
 import { state } from "./core/state";
-import { overlay, syncFullscreenParent, closeSettings, settingsHost } from "./ui/overlay";
+import { overlay, syncFullscreenParent } from "./ui/overlay";
+import { settingsHost } from "./ui/elements";
+import { closeSettings } from "./ui/settings-popover";
 import {
   applyNativeSubtitleVisibility,
   clearNativeSubtitleHiding,

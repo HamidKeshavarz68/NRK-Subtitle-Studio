@@ -4,6 +4,17 @@ All notable changes to this project will be documented in this file. The format
 is loosely based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and
 this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.2] - 2026-08-25
+
+### Changed
+
+- Reorganized the content script into explicit core, platform, subtitle,
+  translation, and UI domains with typed extension messaging boundaries.
+- Made the settings popover scale automatically with viewport size and display
+  density, including compact mobile layout and bounded scrolling.
+- Separated overlay window interactions and settings-popover lifecycle from the
+  overlay coordinator to keep UI responsibilities focused.
+
 ## [0.5.0] - 2026-08-09
 
 ### Added
@@ -166,4 +177,3 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   the panel is expanded, restoring it on collapse.
 - Mounts only on actual video pages (URLs containing `/episode/`, `/program/`,
   `/direkte/`, `/film/`, `/se/`).
-
