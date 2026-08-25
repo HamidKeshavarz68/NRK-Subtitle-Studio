@@ -7,14 +7,25 @@
  * split back apart), with a per-pair LRU-ish cache so seeks/repeats are free.
  */
 
-import { TRANSLATE, TranslationState } from "./config";
-import { detectSourceLang, isTranslationActive, settings, state } from "./state";
-import { cueText, normalizeWhitespace } from "./utils";
-import { invalidateRender, render, updateStatus } from "./renderer";
-import { showToast } from "./toast";
-import { t } from "./i18n";
+import { TRANSLATE, TranslationState } from "../core/config";
+import { detectSourceLang, isTranslationActive, settings, state } from "../core/state";
+import { cueText, normalizeWhitespace } from "../core/utils";
+import { requestRuntimeText } from "../platform/runtime-client";
+import type { TranslateRequest } from "../../shared/extension/messages";
 
-declare const chrome: any;
+interface TranslationUiHandlers {
+  invalidateRender(): void;
+  render(): void;
+  showFallbackWarning(): void;
+  updateStatus(): void;
+}
+
+let uiHandlers: TranslationUiHandlers | null = null;
+
+/** Connect translation state changes to the UI without importing the renderer. */
+export function setTranslationUiHandlers(handlers: TranslationUiHandlers): void {
+  uiHandlers = handlers;
+}
 
 interface TranslationEntry {
   state: TranslationState;
@@ -50,28 +61,12 @@ function warnDeeplFallback(): void {
   const now = Date.now();
   if (now - lastFallbackToastAt < 8000) return;
   lastFallbackToastAt = now;
-  showToast(t("deepl_fallback"), 7000);
+  uiHandlers?.showFallbackWarning();
 }
 
 /** Proxy one translate request through the background service worker. */
-function proxyTranslate(payload: Record<string, unknown>): Promise<string> {
-  return new Promise((resolve, reject) => {
-    try {
-      chrome.runtime.sendMessage(
-        { type: "translate", ...payload },
-        (resp: any) => {
-          const err = chrome.runtime.lastError;
-          if (err) return reject(new Error(err.message || "runtime error"));
-          if (!resp || !resp.ok) {
-            return reject(new Error((resp && resp.error) || "translate failed"));
-          }
-          resolve(String(resp.text || ""));
-        }
-      );
-    } catch (e) {
-      reject(e instanceof Error ? e : new Error(String(e)));
-    }
-  });
+function proxyTranslate(request: Omit<TranslateRequest, "type">): Promise<string> {
+  return requestRuntimeText({ type: "translate", ...request });
 }
 
 /**
@@ -106,14 +101,14 @@ export function enqueueTranslate(idx: number): void {
   const norm = normalizeWhitespace(cueText(state.cues[idx]));
   if (!norm) {
     translations.set(idx, { state: "done", text: "" });
-    invalidateRender();
+    uiHandlers?.invalidateRender();
     return;
   }
 
   const cached = cache.get(cacheKeyFor(detectSourceLang(), settings.targetLang, norm));
   if (cached !== undefined) {
     translations.set(idx, { state: "done", text: cached });
-    invalidateRender();
+    uiHandlers?.invalidateRender();
     return;
   }
 
@@ -185,7 +180,7 @@ async function flushBatch(): Promise<void> {
         } catch {
           translations.set(i, { state: "error", text: "" });
         }
-        invalidateRender();
+        uiHandlers?.invalidateRender();
       }
     }
   } catch (e) {
@@ -195,8 +190,8 @@ async function flushBatch(): Promise<void> {
     await new Promise((r) => setTimeout(r, 1000));
   } finally {
     batchInflight = false;
-    invalidateRender();
-    render();
+    uiHandlers?.invalidateRender();
+    uiHandlers?.render();
     if (pending.size > 0) scheduleFlush();
   }
 }
@@ -297,9 +292,9 @@ export function stopTranslations(): void {
  */
 export function onTranslationConfigChanged(): void {
   stopTranslations();
-  invalidateRender();
+  uiHandlers?.invalidateRender();
   // Stable status — set once here, never per-cue, so the toolbar doesn't
   // flicker as cues enter/leave the visible window.
-  updateStatus();
-  render();
+  uiHandlers?.updateStatus();
+  uiHandlers?.render();
 }

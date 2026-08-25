@@ -8,18 +8,26 @@
  * states change, and the active line auto-scrolls to the centre.
  */
 
-import { ROLL } from "./config";
-import { detectSourceLang, isTranslationActive, settings, state } from "./state";
-import { cueText, escapeHtml, formatTime } from "./utils";
-import { listEl, statusEl } from "./overlay";
+import { ROLL } from "../core/config";
+import { detectSourceLang, isTranslationActive, settings, state } from "../core/state";
+import { cueText, escapeHtml, formatTime } from "../core/utils";
+import { listEl, statusEl } from "./elements";
 import {
   hideNativeDomSubtitles,
   setNativeCaptionOverride,
   clearNativeCaptionOverride,
   setSingleRefreshHandler,
-} from "./native-subtitles";
-import { enqueueTranslate, getTranslation } from "./translator";
+} from "../subtitles/native-subtitles";
+import {
+  enqueueTranslate,
+  getTranslation,
+  setTranslationUiHandlers,
+} from "../translation/translator";
 import { t } from "./i18n";
+import { showToast } from "./toast";
+
+let lastRenderSignature: string | null = null;
+let lastActiveIndex: number | undefined;
 
 export function setStatus(text: string): void {
   statusEl.textContent = text;
@@ -35,7 +43,7 @@ export function updateStatus(): void {
 
 /** Force the next render() to rebuild even if the window signature matches. */
 export function invalidateRender(): void {
-  (listEl as any).__nsrSig = null;
+  lastRenderSignature = null;
 }
 
 /** Index of the last cue whose startTime ≤ t (binary search), or -1. */
@@ -188,8 +196,8 @@ export function render(): void {
     }
   }
   const sig = `${start}|${end}|${active}|${settings.targetLang}|${settings.displayMode}|${trSig}`;
-  if ((listEl as any).__nsrSig === sig) return;
-  (listEl as any).__nsrSig = sig;
+  if (lastRenderSignature === sig) return;
+  lastRenderSignature = sig;
 
   const parts: string[] = [];
   for (let i = start; i < end; i++) {
@@ -225,20 +233,25 @@ export function render(): void {
     //     original line doesn't move; new content extends downward.
     // Snap instantly on re-renders to avoid visible bobbing; only animate
     // when the active cue index actually changes (a true line transition).
-    const prevActive = (listEl as any).__nsrActive as number | undefined;
     const offsetFromTop = Math.round(listEl.clientHeight * 0.4);
     const target = Math.max(0, activeEl.offsetTop - offsetFromTop);
-    if (prevActive === active) {
+    if (lastActiveIndex === active) {
       // Direct assignment bypasses the CSS `scroll-behavior: smooth` rule
       // (which would otherwise animate every adjustment and cause shake).
       listEl.scrollTop = target;
     } else {
       listEl.scrollTo({ top: target, behavior: "smooth" });
     }
-    (listEl as any).__nsrActive = active;
+    lastActiveIndex = active;
   }
 }
 
 // Let native-subtitles re-drive single-mode rendering the instant NRK repaints
 // its caption (a new cue), so the styled/translated line appears without lag.
+setTranslationUiHandlers({
+  invalidateRender,
+  render,
+  showFallbackWarning: () => showToast(t("deepl_fallback"), 7000),
+  updateStatus,
+});
 setSingleRefreshHandler(render);

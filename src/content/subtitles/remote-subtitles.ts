@@ -13,10 +13,9 @@
  * and parse the VTT into plain cues.
  */
 
-import { state } from "./state";
-import { stripHtml } from "./utils";
-
-declare const chrome: any;
+import { state } from "../core/state";
+import { stripHtml } from "../core/utils";
+import { requestRuntimeText } from "../platform/runtime-client";
 
 export interface RemoteCue {
   start: number;
@@ -63,18 +62,7 @@ export function extractProgramId(): string | null {
 
 /** Fetch a NRK URL as text via the background proxy (bypasses page CSP). */
 function nrkFetchText(url: string): Promise<string> {
-  return new Promise((resolve, reject) => {
-    try {
-      chrome.runtime.sendMessage({ type: "nrk-fetch", url }, (resp: any) => {
-        const err = chrome.runtime.lastError;
-        if (err) return reject(new Error(err.message || "runtime error"));
-        if (!resp || !resp.ok) return reject(new Error((resp && resp.error) || "fetch failed"));
-        resolve(String(resp.text || ""));
-      });
-    } catch (e) {
-      reject(e instanceof Error ? e : new Error(String(e)));
-    }
-  });
+  return requestRuntimeText({ type: "nrk-fetch", url });
 }
 
 const ENTITIES: Record<string, string> = {
@@ -143,6 +131,26 @@ interface ManifestSubtitle {
   webVtt?: string;
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return !!value && typeof value === "object";
+}
+
+function manifestSubtitles(value: unknown): ManifestSubtitle[] {
+  if (!isRecord(value) || !isRecord(value.playable)) return [];
+  const subtitles = value.playable.subtitles;
+  if (!Array.isArray(subtitles)) return [];
+  return subtitles.filter((subtitle): subtitle is ManifestSubtitle => {
+    if (!isRecord(subtitle)) return false;
+    return (
+      (subtitle.type === undefined || typeof subtitle.type === "string") &&
+      (subtitle.language === undefined || typeof subtitle.language === "string") &&
+      (subtitle.label === undefined || typeof subtitle.label === "string") &&
+      (subtitle.defaultOn === undefined || typeof subtitle.defaultOn === "boolean") &&
+      (subtitle.webVtt === undefined || typeof subtitle.webVtt === "string")
+    );
+  });
+}
+
 /** Choose the manifest subtitle track best matching what the user is watching. */
 function pickTrack(subs: ManifestSubtitle[]): ManifestSubtitle | null {
   if (!subs.length) return null;
@@ -167,7 +175,7 @@ export async function fetchFullSubtitles(): Promise<RemoteSubtitles | null> {
   const id = extractProgramId();
   if (!id) return null;
 
-  let manifest: any;
+  let manifest: unknown;
   try {
     const raw = await nrkFetchText(`https://psapi.nrk.no/playback/manifest/program/${id}`);
     manifest = JSON.parse(raw);
@@ -175,8 +183,8 @@ export async function fetchFullSubtitles(): Promise<RemoteSubtitles | null> {
     return null;
   }
 
-  const subs: ManifestSubtitle[] = manifest?.playable?.subtitles;
-  if (!Array.isArray(subs) || !subs.length) return null;
+  const subs = manifestSubtitles(manifest);
+  if (!subs.length) return null;
 
   const track = pickTrack(subs);
   if (!track?.webVtt) return null;

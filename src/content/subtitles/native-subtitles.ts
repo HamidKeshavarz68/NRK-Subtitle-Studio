@@ -14,9 +14,9 @@
  *    nodes by text and `visibility:hidden`.
  */
 
-import { OVERLAY_ID, FONT } from "./config";
-import { state, settings } from "./state";
-import { cueText, normalizeWhitespace } from "./utils";
+import { OVERLAY_ID, FONT } from "../core/config";
+import { state, settings } from "../core/state";
+import { cueText, normalizeWhitespace } from "../core/utils";
 
 const hiddenDomEls = new Set<HTMLElement>();
 

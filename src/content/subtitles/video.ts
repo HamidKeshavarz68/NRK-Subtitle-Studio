@@ -7,14 +7,14 @@
  * shared state whenever they grow.
  */
 
-import { applyPlaybackRate, settings, state } from "./state";
-import { isSubtitleTrack } from "./utils";
-import { render, setStatus, updateStatus, invalidateRender } from "./renderer";
-import { onTranslationConfigChanged, stopTranslations } from "./translator";
+import { applyPlaybackRate, settings, state } from "../core/state";
+import { isSubtitleTrack } from "../core/utils";
+import { render, setStatus, updateStatus, invalidateRender } from "../ui/renderer";
+import { onTranslationConfigChanged, stopTranslations } from "../translation/translator";
 import { accumulateCues, hasSubtitles, resetAccumulatedCues } from "./download";
 
-/** Marker so each track is hooked for cue updates only once. */
-const HOOKED = "__nsrHooked";
+/** Tracks already subscribed for cue updates. */
+const hookedTracks = new WeakSet<TextTrack>();
 
 let detach: (() => void) | null = null;
 
@@ -131,11 +131,11 @@ export function scanTextTracks(video: HTMLVideoElement): void {
     // instead (see native-subtitles.ts).
 
     // Hook each track once.
-    if (!(t as any)[HOOKED]) {
-      (t as any)[HOOKED] = true;
+    if (!hookedTracks.has(t)) {
+      hookedTracks.add(t);
       t.addEventListener("cuechange", () => snapshotCues(t));
       // Some players add cues asynchronously after first load.
-      t.addEventListener("load" as any, () => snapshotCues(t));
+      t.addEventListener("load", () => snapshotCues(t));
     }
 
     const count = t.cues ? t.cues.length : 0;

@@ -2,6 +2,10 @@
  * Shared configuration, constants and types for the content script.
  */
 
+import type { TranslatorProvider } from "../../shared/extension/messages";
+
+export type { TranslatorProvider } from "../../shared/extension/messages";
+
 export type DisplayMode = "original" | "translated" | "bilingual";
 
 /**
@@ -14,9 +18,6 @@ export type ViewMode = "rolling" | "single";
 
 export type TranslationState = "pending" | "done" | "error";
 export type UiLang = "en" | "no";
-
-/** Translation backend. "google" is the free public endpoint (default). */
-export type TranslatorProvider = "google" | "deepl";
 
 export const DEFAULT_TRANSLATOR: TranslatorProvider = "google";
 

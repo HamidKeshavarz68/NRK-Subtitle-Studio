@@ -6,7 +6,15 @@
  * persistence so callers never have to touch storage directly.
  */
 
-import { DisplayMode, ViewMode, FONT, SPEED, STORAGE_KEYS, TranslatorProvider, DEFAULT_TRANSLATOR } from "./config";
+import {
+  DEFAULT_TRANSLATOR,
+  DisplayMode,
+  FONT,
+  SPEED,
+  STORAGE_KEYS,
+  TranslatorProvider,
+  ViewMode,
+} from "./config";
 import { clamp, readStorage, writeStorage } from "./utils";
 
 export interface AppState {

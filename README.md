@@ -55,7 +55,7 @@ npm run build
 This type-checks with `tsc` and bundles the TypeScript sources with
 [esbuild](https://esbuild.github.io/) into:
 
-- `src/content/*.ts`    → `dist/content/index.js`    (runs on the NRK page)
+- `src/content/**/*.ts` → `dist/content/index.js`    (runs on the NRK page)
 - `src/background/*.ts` → `dist/background/index.js` (service worker — proxies
   Google Translate calls so the page CSP can't block them)
 
@@ -85,10 +85,11 @@ Then:
 | **Mode** | `Original` / `Translated` / `Bilingual`. Bilingual shows the original above and a smaller, blue, italic translation below. Hidden when language is off. |
 | **0.5× – 2×** | Sets `video.playbackRate` and re-asserts it if the player tries to reset. |
 | **A− / A+** | Cue font size (10 px – 32 px, persisted). |
-| **⚙ Settings** | Opens a dropdown to switch the menu language (English / Norsk), pick the **translator** (Google — free, default — or DeepL with your API key), and adjust playback speed / text size. |
+| **⚙ Settings** | Opens a responsive menu for language, translator, playback speed, and text size. Typography, spacing, and controls scale automatically with viewport size and display density. |
 | **Hide / Show** | Collapses the window to just the toolbar, or restores its previous size. |
 
-The settings dropdown is localised with a small built-in i18n layer (`src/content/i18n.ts`).
+The settings dropdown is localised with a small built-in i18n layer
+(`src/content/ui/i18n.ts`).
 Switching the menu language re-renders every toolbar label and tooltip on the fly.
 Turning **Enable translation** off hides the language/mode controls entirely and
 stops any translation requests. The dropdown also shows the current extension
@@ -253,35 +254,53 @@ across reloads, but **size is** (`localStorage.nsr.size`).
 ## File layout
 
 ```
-my-extension/
+NRK-Subtitle-Studio/
 ├── manifest.json              MV3 manifest (content script + service worker)
 ├── package.json
 ├── tsconfig.json
-├── README.md
-├── CHANGELOG.md
-├── LICENSE
 ├── scripts/
-│   └── build.mjs              esbuild bundler (one-off + --watch)
+│   ├── build.mjs              esbuild bundler (one-off + --watch)
+│   └── pack-*.mjs             Chrome package builders
 ├── public/
-│   └── icons/                 Toolbar / web-store icons (placeholder SVG)
+│   └── icons/                 Toolbar and web-store icons
 └── src/
     ├── background/
-    │   └── index.ts           Service worker — Google Translate proxy
+    │   └── index.ts           Service worker and external API proxy
     ├── content/
     │   ├── index.ts           Entry: SPA gating + mount lifecycle
-    │   ├── config.ts          Constants, language list, shared types
-    │   ├── utils.ts           Pure helpers (strip/normalize/escape/time/storage)
-    │   ├── state.ts           Shared state + persisted settings
-    │   ├── translator.ts      Translate proxy (Google/DeepL) + coalesced batch engine
-    │   ├── toast.ts           Short-lived on-screen notices (e.g. DeepL fallback)
-    │   ├── native-subtitles.ts Hide/restore NRK's native captions
-    │   ├── renderer.ts        Status line + rolling-window render
-    │   ├── overlay.ts         Overlay DOM, toolbar, settings menu, drag/resize, click-to-seek
-    │   ├── i18n.ts            Menu i18n (en/no) for the toolbar + settings UI
-    │   └── video.ts           Video/track discovery, attach/detach, snapshots
+    │   ├── core/
+    │   │   ├── config.ts      Constants, language lists and shared types
+    │   │   ├── state.ts       Application state and persisted settings
+    │   │   └── utils.ts       Shared text, cue, time and storage helpers
+    │   ├── platform/
+    │   │   └── runtime-client.ts Typed content-to-service-worker adapter
+    │   ├── subtitles/
+    │   │   ├── download.ts    Full-programme SRT export
+    │   │   ├── native-subtitles.ts Native caption suppression/override
+    │   │   ├── remote-subtitles.ts NRK manifest and WebVTT loading
+    │   │   └── video.ts       Video/track discovery and cue snapshots
+    │   ├── translation/
+    │   │   └── translator.ts  Translation batching, fallback and cache
+    │   └── ui/
+    │       ├── elements.ts    Overlay DOM construction and element references
+    │       ├── i18n.ts        English/Norwegian UI messages
+    │       ├── overlay.ts     Settings, drag, resize and direct interactions
+    │       ├── player-controls.ts NRK player-button integration
+    │       ├── renderer.ts    Rolling and single-caption rendering
+    │       └── toast.ts       Short-lived notices
+    ├── shared/
+    │   └── extension/
+    │       ├── messages.ts    Shared request/response contracts
+    │       └── runtime.ts     Typed Chrome runtime boundary
     └── styles/
         └── overlay.css        Overlay styles
 ```
+
+The content entry point composes these domains. Shared extension contracts contain
+no feature logic; platform code owns browser API access; subtitle and translation
+code own their respective workflows; UI code owns DOM creation and presentation.
+Imports remain explicit instead of using barrel files, which keeps dependencies
+visible and avoids hidden initialization side effects in the content-script bundle.
 
 Built with `npm run build` → `dist/content/index.js` and
 `dist/background/index.js` (each a single bundled file).
@@ -310,4 +329,3 @@ Built with `npm run build` → `dist/content/index.js` and
 ## License
 
 [MIT](./LICENSE)
-

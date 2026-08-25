@@ -9,7 +9,7 @@
  * into the fullscreen subtree automatically.
  */
 
-import { OVERLAY_ID } from "./config";
+import { OVERLAY_ID } from "../core/config";
 
 let hideTimer: number | null = null;
 
