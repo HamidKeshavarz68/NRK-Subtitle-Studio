@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<widget xmlns="http://www.w3.org/ns/widgets"
+  xmlns:tizen="http://tizen.org/ns/widgets"
+  id="https://github.com/HamidKeshavarz68/NRK-Subtitle-Studio/tizen"
+  version="0.1.0"
+  viewmodes="maximized">
+  <tizen:application id="keshavarz68.nrksubtitle.tizen" package="kesh68nrksub" required_version="6.0" />
+  <content src="index.html" />
+  <icon src="../public/icons/icon-128.png" />
+  <name>NRK Subtitle Studio (Tizen)</name>
+  <feature name="http://tizen.org/feature/screen.size.all" />
+  <tizen:setting screen-orientation="landscape" context-menu="disable" background-support="disable" encryption="disable" hwkey-event="enable" />
+  <access origin="https://tv.nrk.no" subdomains="true" />
+  <access origin="https://psapi.nrk.no" subdomains="true" />
+  <access origin="https://*.nrk.no" subdomains="true" />
+  <access origin="https://translate.googleapis.com" subdomains="true" />
+</widget>

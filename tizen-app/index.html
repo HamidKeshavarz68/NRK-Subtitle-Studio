@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=1920,height=1080,initial-scale=1.0" />
+    <title>NRK Subtitle Studio (Tizen)</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="layout">
+      <section class="controls">
+        <label class="field">
+          <span>NRK URL or Programme ID</span>
+          <input id="nrk-input" type="text" placeholder="https://tv.nrk.no/... or DVFJ65100124" />
+        </label>
+        <button id="load-btn" type="button">Load</button>
+
+        <label class="field">
+          <span>Subtitle track</span>
+          <select id="subtitle-track"></select>
+        </label>
+
+        <label class="field">
+          <span>Translation language</span>
+          <select id="target-lang"></select>
+        </label>
+
+        <label class="field">
+          <span>Display mode</span>
+          <select id="display-mode">
+            <option value="original">Original</option>
+            <option value="translated">Translated</option>
+            <option value="bilingual">Bilingual</option>
+          </select>
+        </label>
+
+        <div class="field">
+          <span>Text size</span>
+          <div class="font-controls">
+            <button id="font-minus" type="button">A−</button>
+            <span id="font-value">34px</span>
+            <button id="font-plus" type="button">A+</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="player">
+        <video id="player" controls autoplay playsinline></video>
+        <p id="status" class="status"></p>
+      </section>
+
+      <section id="cue-list" class="cue-list"></section>
+    </main>
+    <script src="./dist/app.js"></script>
+  </body>
+</html>

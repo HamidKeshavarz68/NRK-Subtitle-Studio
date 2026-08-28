@@ -22,6 +22,7 @@ panel that:
 - [Install from the Chrome Web Store](#install-from-the-chrome-web-store)
 - [Install (unpacked)](#install-unpacked)
 - [Toolbar controls](#toolbar-controls)
+- [Tizen TV standalone app (prototype)](#tizen-tv-standalone-app-prototype)
 - [Scripts](#scripts)
 - [Releasing to the Chrome Web Store](#releasing-to-the-chrome-web-store)
 - [How it works](#how-it-works)
@@ -95,6 +96,30 @@ Turning **Enable translation** off hides the language/mode controls entirely and
 stops any translation requests. The dropdown also shows the current extension
 version and quick links to email the author or open the GitHub repository for
 bugs, issues and suggestions.
+
+## Tizen TV standalone app (prototype)
+
+This repository now includes a **separate Tizen web app prototype** in
+`/tizen-app`. This is not an injection into NRK's official Samsung app (that
+is blocked by Tizen app sandboxing), but a standalone app that reproduces the
+subtitle panel workflow.
+
+### What it includes
+
+- TV-friendly shell UI with Samsung remote key navigation
+- NRK programme-id/URL loading through `psapi.nrk.no` manifest
+- Subtitle track selection and full-WebVTT parsing
+- Original / Translated / Bilingual subtitle display modes
+- Large-text controls for TV readability
+- Translation fallback behavior (failed cues keep original text)
+
+### Build
+
+```powershell
+npm run build:tizen
+```
+
+This outputs `tizen-app/dist/app.js`, used by `tizen-app/index.html`.
 
 ## Scripts
 

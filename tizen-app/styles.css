@@ -1,0 +1,157 @@
+:root {
+  color-scheme: dark;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: #0a0f16;
+  color: #eef4ff;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: 540px 1fr 620px;
+  height: 100vh;
+  gap: 16px;
+  padding: 16px;
+}
+
+.controls,
+.player,
+.cue-list {
+  background: #101826;
+  border: 1px solid #273247;
+  border-radius: 12px;
+  padding: 14px;
+}
+
+.controls {
+  display: grid;
+  gap: 14px;
+  align-content: start;
+}
+
+.field {
+  display: grid;
+  gap: 8px;
+}
+
+.field > span {
+  color: #9eb3d1;
+  font-size: 18px;
+}
+
+input,
+select,
+button {
+  min-height: 52px;
+  border-radius: 10px;
+  border: 1px solid #31415c;
+  background: #0f1521;
+  color: #f2f6ff;
+  font-size: 20px;
+  padding: 8px 12px;
+}
+
+button {
+  background: #183355;
+  cursor: pointer;
+}
+
+input:focus,
+select:focus,
+button:focus,
+video:focus,
+.cue-row:focus {
+  outline: 3px solid #61a6ff;
+  outline-offset: 1px;
+}
+
+.font-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+#font-value {
+  min-width: 72px;
+  text-align: center;
+  font-size: 22px;
+}
+
+.player {
+  display: grid;
+  grid-template-rows: 1fr auto;
+  min-height: 0;
+}
+
+#player {
+  width: 100%;
+  height: 100%;
+  background: #000;
+  border-radius: 10px;
+}
+
+.status {
+  margin: 10px 0 0;
+  min-height: 26px;
+  color: #9eb3d1;
+  font-size: 20px;
+}
+
+.cue-list {
+  min-height: 0;
+  overflow: auto;
+  display: grid;
+  gap: 8px;
+  --cue-font-size: 34px;
+}
+
+.cue-row {
+  width: 100%;
+  border: 1px solid #2b3851;
+  background: #0b111c;
+  text-align: left;
+  display: grid;
+  grid-template-columns: 84px 1fr;
+  gap: 10px;
+  align-items: start;
+  padding: 10px;
+}
+
+.cue-row.active {
+  border-color: #61a6ff;
+  background: #152338;
+}
+
+.cue-time {
+  font-size: 18px;
+  color: #87a1c6;
+  line-height: 1.5;
+}
+
+.cue-text-wrap {
+  display: grid;
+  gap: 2px;
+}
+
+.cue-text {
+  font-size: var(--cue-font-size);
+  line-height: 1.35;
+}
+
+.cue-translation {
+  font-size: calc(var(--cue-font-size) * 0.78);
+  line-height: 1.35;
+  color: #7fb4ff;
+  font-style: italic;
+}
+
+.visually-hidden {
+  display: none;
+}
