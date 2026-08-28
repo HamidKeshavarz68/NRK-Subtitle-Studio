@@ -152,6 +152,6 @@ video:focus,
   font-style: italic;
 }
 
-.visually-hidden {
+.hidden {
   display: none;
 }

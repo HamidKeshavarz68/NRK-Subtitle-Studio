@@ -3,6 +3,8 @@ import { normalizeWhitespace } from "../core/utils";
 const cache = new Map<string, string>();
 const queue: Array<() => Promise<void>> = [];
 let running = false;
+const MAX_QUEUE = 500;
+const TRANSLATE_TIMEOUT_MS = 8000;
 
 function cacheKey(source: string, target: string, text: string): string {
   return `${source}|${target}|${normalizeWhitespace(text)}`;
@@ -18,6 +20,8 @@ function extractTranslatedText(data: unknown): string {
 }
 
 async function googleTranslate(text: string, source: string, target: string): Promise<string> {
+  // Uses the same unofficial endpoint as the extension build (best-effort only).
+  // It may be rate-limited or changed without notice, so failures are expected.
   const url =
     "https://translate.googleapis.com/translate_a/single" +
     "?client=gtx" +
@@ -26,7 +30,9 @@ async function googleTranslate(text: string, source: string, target: string): Pr
     "&dt=t" +
     "&q=" + encodeURIComponent(text);
 
-  const res = await fetch(url);
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), TRANSLATE_TIMEOUT_MS);
+  const res = await fetch(url, { signal: controller.signal }).finally(() => clearTimeout(timer));
   if (!res.ok) throw new Error(`Translate failed (${res.status})`);
   const data: unknown = await res.json();
   return extractTranslatedText(data).trim();
@@ -60,6 +66,10 @@ export function enqueueTranslate(
     onDone(cached);
     return;
   }
+  if (queue.length >= MAX_QUEUE) {
+    onError(new Error("Translation queue is full."));
+    return;
+  }
 
   queue.push(async () => {
     try {
@@ -76,4 +86,5 @@ export function enqueueTranslate(
 
 export function clearTranslationCache(): void {
   cache.clear();
+  queue.length = 0;
 }

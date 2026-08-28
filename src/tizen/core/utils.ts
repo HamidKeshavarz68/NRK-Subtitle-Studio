@@ -11,7 +11,9 @@ const ENTITIES: Record<string, string> = {
 };
 
 export function stripHtml(s: string): string {
-  return s.replace(/<[^>]+>/g, "");
+  const node = document.createElement("div");
+  node.innerHTML = s;
+  return node.textContent || "";
 }
 
 export function normalizeWhitespace(s: string): string {

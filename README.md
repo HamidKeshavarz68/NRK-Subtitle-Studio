@@ -112,6 +112,8 @@ subtitle panel workflow.
 - Original / Translated / Bilingual subtitle display modes
 - Large-text controls for TV readability
 - Translation fallback behavior (failed cues keep original text)
+- Translation currently uses the same unofficial Google `gtx` endpoint as the
+  extension (best-effort, rate-limited)
 
 ### Build
 

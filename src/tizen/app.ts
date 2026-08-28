@@ -3,6 +3,13 @@ import { formatTime } from "./core/utils";
 import { loadProgram, loadSubtitleCues } from "./services/nrk";
 import { clearTranslationCache, enqueueTranslate } from "./services/translator";
 
+type TizenAppHandle = { exit(): void };
+type TizenGlobal = {
+  application?: {
+    getCurrentApplication(): TizenAppHandle;
+  };
+};
+
 const ROLL_PAST = 3;
 const ROLL_FUTURE = 12;
 
@@ -52,6 +59,7 @@ let fontSize = 34;
 let translationWarningShown = false;
 const translated = new Map<number, string>();
 const translateErrors = new Set<number>();
+let lastRenderSignature = "";
 
 function setStatus(text: string): void {
   statusEl.textContent = text;
@@ -62,8 +70,8 @@ function applyFontSize(): void {
   fontValue.textContent = `${fontSize}px`;
 }
 
-function findActiveCueIndex(time: number): number {
-  if (!cues.length) return -1;
+function findCuePosition(time: number): { active: number; anchor: number } {
+  if (!cues.length) return { active: -1, anchor: 0 };
   let lo = 0;
   let hi = cues.length - 1;
   let idx = -1;
@@ -76,9 +84,9 @@ function findActiveCueIndex(time: number): number {
       hi = mid - 1;
     }
   }
-  if (idx < 0) return -1;
-  if (time > cues[idx].end && idx < cues.length - 1 && time >= cues[idx + 1].start) return idx + 1;
-  return idx;
+  if (idx < 0) return { active: -1, anchor: 0 };
+  if (time > cues[idx].end) return { active: -1, anchor: idx };
+  return { active: idx, anchor: idx };
 }
 
 function enqueueWindowTranslations(from: number, to: number): void {
@@ -93,7 +101,7 @@ function enqueueWindowTranslations(from: number, to: number): void {
       targetLang,
       (result) => {
         translated.set(i, result);
-        renderCues();
+        renderCues(true);
       },
       () => {
         translateErrors.add(i);
@@ -101,7 +109,7 @@ function enqueueWindowTranslations(from: number, to: number): void {
           translationWarningShown = true;
           setStatus("Some translations failed. Showing original where needed.");
         }
-        renderCues();
+        renderCues(true);
       }
     );
   }
@@ -135,12 +143,13 @@ function renderCueLine(cue: Cue, idx: number, active: boolean): HTMLElement {
     const tr = document.createElement("span");
     tr.className = "cue-translation";
     if (displayMode === "translated") {
-      original.classList.add("visually-hidden");
+      original.classList.add("hidden");
     }
     if (translated.has(idx)) {
       tr.textContent = translated.get(idx) || "";
     } else if (translateErrors.has(idx)) {
       tr.textContent = "⚠";
+      tr.setAttribute("aria-label", "Translation unavailable");
     } else {
       tr.textContent = "…";
     }
@@ -151,14 +160,31 @@ function renderCueLine(cue: Cue, idx: number, active: boolean): HTMLElement {
   return row;
 }
 
-function renderCues(): void {
-  cueList.innerHTML = "";
-  if (!cues.length) return;
+function renderCues(force = false): void {
+  if (!cues.length) {
+    cueList.innerHTML = "";
+    lastRenderSignature = "";
+    return;
+  }
 
   const t = videoEl.currentTime || 0;
-  const activeIdx = findActiveCueIndex(t);
-  const from = Math.max(0, activeIdx - ROLL_PAST);
-  const to = Math.min(cues.length - 1, activeIdx + ROLL_FUTURE);
+  const pos = findCuePosition(t);
+  const activeIdx = pos.active;
+  const anchor = pos.anchor;
+  const from = Math.max(0, anchor - ROLL_PAST);
+  const to = Math.min(cues.length - 1, anchor + ROLL_FUTURE);
+  let translatedCount = 0;
+  let errorCount = 0;
+  for (let i = from; i <= to; i++) {
+    if (translated.has(i)) translatedCount++;
+    if (translateErrors.has(i)) errorCount++;
+  }
+  const signature = `${from}:${to}:${activeIdx}:${displayMode}:${targetLang}:${translatedCount}:${errorCount}`;
+
+  if (!force && signature === lastRenderSignature) return;
+  lastRenderSignature = signature;
+
+  cueList.innerHTML = "";
   enqueueWindowTranslations(from, to);
 
   for (let i = from; i <= to; i++) {
@@ -173,26 +199,30 @@ function resetTranslations(): void {
   translateErrors.clear();
   translationWarningShown = false;
   clearTranslationCache();
+  lastRenderSignature = "";
 }
 
-async function loadTrack(index: number): Promise<void> {
+async function loadTrack(index: number): Promise<boolean> {
   if (!tracks[index]) {
     cues = [];
     renderCues();
     setStatus("No subtitle track selected.");
-    return;
+    return false;
   }
   sourceLang = (tracks[index].language || "no").toLowerCase().split("-")[0] || "no";
   setStatus("Loading subtitles…");
   try {
     cues = await loadSubtitleCues(tracks[index]);
     resetTranslations();
-    renderCues();
+    renderCues(true);
     setStatus(`Loaded ${cues.length} subtitles (${sourceLang.toUpperCase()}).`);
+    return true;
   } catch (error) {
     cues = [];
+    lastRenderSignature = "";
     renderCues();
     setStatus(error instanceof Error ? error.message : "Subtitle loading failed.");
+    return false;
   }
 }
 
@@ -231,10 +261,17 @@ async function loadFromInput(): Promise<void> {
       subtitleSelect.appendChild(opt);
     });
 
-    const first = Math.max(0, tracks.findIndex((t) => t.defaultOn));
+    const defaultIdx = tracks.findIndex((t) => t.defaultOn);
+    const first = defaultIdx >= 0 ? defaultIdx : 0;
     subtitleSelect.value = String(first);
-    await loadTrack(first);
-    setStatus(`Programme ${program.programId} loaded.`);
+    const loaded = await loadTrack(first);
+    if (loaded) {
+      setStatus(
+        program.videoUrl
+          ? `Programme ${program.programId} loaded successfully.`
+          : `Programme ${program.programId} loaded, but no playable video URL was found.`
+      );
+    }
   } catch (error) {
     setStatus(error instanceof Error ? error.message : "Failed to load programme.");
   }
@@ -251,13 +288,13 @@ subtitleSelect.addEventListener("change", () => {
 langSelect.addEventListener("change", () => {
   targetLang = langSelect.value || "off";
   resetTranslations();
-  renderCues();
+  renderCues(true);
 });
 
 modeSelect.addEventListener("change", () => {
   const val = modeSelect.value as DisplayMode;
   displayMode = val === "translated" || val === "bilingual" ? val : "original";
-  renderCues();
+  renderCues(true);
 });
 
 fontMinusBtn.addEventListener("click", () => {
@@ -270,8 +307,8 @@ fontPlusBtn.addEventListener("click", () => {
   applyFontSize();
 });
 
-videoEl.addEventListener("timeupdate", renderCues);
-videoEl.addEventListener("seeked", renderCues);
+videoEl.addEventListener("timeupdate", () => renderCues());
+videoEl.addEventListener("seeked", () => renderCues());
 
 const focusables = [
   appInput,
@@ -295,7 +332,16 @@ window.addEventListener("keydown", (event) => {
 
   if (keyCode === 10009) {
     event.preventDefault();
-    setStatus("Back key pressed.");
+    const tizen = (globalThis as typeof globalThis & { tizen?: TizenGlobal }).tizen;
+    if (tizen?.application) {
+      tizen.application.getCurrentApplication().exit();
+      return;
+    }
+    if (history.length > 1) {
+      history.back();
+      return;
+    }
+    setStatus("Back key not available in this runtime.");
     return;
   }
 
@@ -326,5 +372,5 @@ window.addEventListener("keydown", (event) => {
 });
 
 applyFontSize();
-setStatus("Ready. Enter NRK URL/program id and press Load.");
+setStatus("Ready. Enter NRK URL/programme id and press Load.");
 focusables[focusIndex].focus();
