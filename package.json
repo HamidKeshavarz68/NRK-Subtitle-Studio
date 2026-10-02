@@ -14,7 +14,12 @@
     "rebuild": "npm run clean && npm run build",
     "zip": "npm run rebuild && node scripts/pack-zip.mjs",
     "crx": "npm run rebuild && node scripts/pack-crx.mjs",
-    "package": "npm run clean:all && npm run build && node scripts/pack-zip.mjs && node scripts/pack-crx.mjs"
+    "package": "npm run clean:all && npm run build && node scripts/pack-zip.mjs && node scripts/pack-crx.mjs",
+    "build:tv": "npm run typecheck && node scripts/build-tv.mjs",
+    "watch:tv": "node scripts/build-tv.mjs --watch",
+    "serve:tv": "node scripts/tv-server.mjs",
+    "package:tv": "npm run typecheck && node scripts/build-tv.mjs --package",
+    "install:tv": "npm run typecheck && node scripts/build-tv.mjs --install"
   },
   "devDependencies": {
     "archiver": "^8.0.0",

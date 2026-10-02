@@ -30,6 +30,15 @@ jobs:
           test -f dist/background/index.js
           test -f src/styles/overlay.css
 
+      - name: Samsung TV app build
+        run: |
+          node scripts/build-tv.mjs
+          test -f build/tv/app/config.xml
+          test -f build/tv/app/index.html
+          test -f build/tv/app/js/app.js
+          test -f build/tv/app/css/app.css
+          node --check build/tv/app/js/app.js
+
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
