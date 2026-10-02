@@ -1,0 +1,56 @@
+name: Publish TizenBrew module
+
+# Builds the Samsung TV (TizenBrew) module and force-pushes it as a single
+# commit to the `tizenbrew` branch. TizenBrew loads the module through jsDelivr:
+#   gh/<owner>/<repo>@tizenbrew
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: tizenbrew-publish
+  cancel-in-progress: true
+
+jobs:
+  publish:
+    name: Build & push tizenbrew branch
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - name: Build module
+        run: npm run build:tizenbrew
+
+      - name: Sanity check
+        run: |
+          test -f build/tizenbrew/package.json
+          test -f build/tizenbrew/userScript.js
+
+      - name: Push to tizenbrew branch
+        working-directory: build/tizenbrew
+        run: |
+          git init -q -b tizenbrew
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -q -m "TizenBrew module from ${GITHUB_SHA::7}"
+          git push -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${GITHUB_REPOSITORY}.git" tizenbrew
+
+      - name: Purge jsDelivr cache
+        run: |
+          for f in package.json userScript.js; do
+            curl -fsS "https://purge.jsdelivr.net/gh/${GITHUB_REPOSITORY}@tizenbrew/$f" || true
+            echo
+          done

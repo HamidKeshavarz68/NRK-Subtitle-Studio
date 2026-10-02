@@ -38,6 +38,7 @@ function restoreSize(element: HTMLElement): void {
 }
 
 function persistSize(element: HTMLElement): void {
+  if (typeof ResizeObserver === "undefined") return;
   let saveTimer: number | null = null;
   const observer = new ResizeObserver(() => {
     if (saveTimer !== null) return;

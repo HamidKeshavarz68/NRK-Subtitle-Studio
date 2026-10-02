@@ -16,15 +16,12 @@
 import { closeSettings, isSettingsOpen, toggleSettings } from "./settings-popover";
 import { statusEl } from "./elements";
 import { onUiLangChange, t } from "./i18n";
-import { runtime } from "../../shared/extension/runtime";
+import { ICON_URL } from "../platform/extension-info";
 
 const BTN_CLASS = "nsr-player-btn";
 // NRK's own control-button classes (reused so ours matches sizing/hover/radius).
 const NRK_BTN_CLASSES =
   "tv-player-button hover:background-color-theme-dark-opacity-75 border-radius-l-expressive";
-
-// The extension's own icon (declared in web_accessible_resources).
-const ICON_URL = runtime.getURL("public/icons/icon-128.png");
 
 let button: HTMLButtonElement | null = null;
 

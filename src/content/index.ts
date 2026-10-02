@@ -70,7 +70,7 @@ function bootstrap(): void {
   }
 
   // Detect SPA navigations: NRK uses the History API.
-  const fireNavigation = () => queueMicrotask(mountIfNeeded);
+  const fireNavigation = () => { void Promise.resolve().then(mountIfNeeded); };
   const origPush = history.pushState;
   const origReplace = history.replaceState;
   history.pushState = function (
