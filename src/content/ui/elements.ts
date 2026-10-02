@@ -1,21 +1,5 @@
 import { OVERLAY_ID, TRANSLATORS, UI_LANGS } from "../core/config";
-import { runtime } from "../../shared/extension/runtime";
-
-const ICON_URL = (() => {
-  try {
-    return runtime.getURL("public/icons/icon-128.png");
-  } catch {
-    return "";
-  }
-})();
-
-const VERSION = (() => {
-  try {
-    return runtime.getManifest().version || "";
-  } catch {
-    return "";
-  }
-})();
+import { ICON_URL, VERSION } from "../platform/extension-info";
 
 const REPO_URL = "https://github.com/HamidKeshavarz68/NRK-Subtitle-Studio";
 const WEBSTORE_URL =
