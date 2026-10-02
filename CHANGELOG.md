@@ -4,6 +4,25 @@ All notable changes to this project will be documented in this file. The format
 is loosely based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and
 this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+## [0.6.0] - 2026-10-03
+
+### Added
+
+- **Samsung TV app (Tizen).** A standalone `.wgt` app for Samsung Smart TVs
+  (2018+) under `src/tv/`: browse, search and play NRK TV with the remote, and
+  follow the subtitles in a rolling side panel or bottom caption, in Norwegian,
+  translated or bilingual. Color keys switch display mode, layout and text
+  size; ▲/▼ step between subtitle lines. Playback uses Samsung AVPlay with an
+  HTML5 video fallback. New scripts: `build:tv`, `watch:tv`, `serve:tv`,
+  `package:tv` and `install:tv`.
+
+### Changed
+
+- The WebVTT parser moved to `src/shared/subtitles/vtt.ts` and is shared by the
+  extension and the TV app.
+
 ## [0.5.2] - 2026-08-25
 
 ### Changed

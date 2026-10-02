@@ -23,6 +23,7 @@ panel that:
 - [Install (unpacked)](#install-unpacked)
 - [Toolbar controls](#toolbar-controls)
 - [Scripts](#scripts)
+- [Samsung TV app (Tizen)](#samsung-tv-app-tizen)
 - [Releasing to the Chrome Web Store](#releasing-to-the-chrome-web-store)
 - [How it works](#how-it-works)
 - [File layout](#file-layout)
@@ -107,6 +108,11 @@ bugs, issues and suggestions.
 | `npm run rebuild` | `clean` + `build`. |
 | `npm run package` | Rebuild and produce `build/nrk-subtitle-studio.zip` ready to upload to the Chrome Web Store. |
 | `npm run crx` | Rebuild and produce `build/nrk-subtitle-studio.crx` (auto-creates the signing key at `.crx-key/key.pem` on first run). |
+| `npm run build:tv` | Build the Samsung TV app into `build/tv/app/` (see [Samsung TV app](#samsung-tv-app-tizen)). |
+| `npm run watch:tv` | Rebuild the TV app on change. |
+| `npm run serve:tv` | Serve `build/tv/app/` on port 8787 for a desktop preview, plus an NRK/Google proxy the TV can use. |
+| `npm run package:tv` | Build, sign and package `build/tv/NRK-Subtitle-Studio-<version>.wgt` with the Tizen CLI. |
+| `npm run install:tv` | Package, then install and launch on the TV (`npm run install:tv -- --tv <TV-IP>`). |
 
 > The `.crx` signing key lives in `.crx-key/` (git-ignored), **not** under
 > `build/`. It is kept in a dot-prefixed folder on purpose: Chrome's
@@ -114,6 +120,82 @@ bugs, issues and suggestions.
 > private key file is found inside the extension. Chrome ignores files and
 > folders whose names start with `.`, so the key never trips that warning.
 > Back this file up and reuse it for every build to keep a stable extension ID.
+
+## Samsung TV app (Tizen)
+
+`src/tv/` contains a standalone Samsung Smart TV app (Tizen 4.0 / 2018 models
+and newer) that brings the rolling, translated subtitle panel to the living
+room. It doesn't wrap tv.nrk.no; it talks to NRK's public API directly:
+
+- browse the NRK TV front page, live channels and search, with the remote,
+- open a series, pick a season and an episode, and play it,
+- read the subtitles in a **side panel** (2 past + 8 upcoming lines) or as a
+  **bottom caption**, in Norwegian, translated, or bilingual,
+- step line by line, repeat a line, and resume where you left off.
+
+Programmes are played with Samsung's AVPlay (NRK serves DASH to TVs and
+AES-128 HLS for live channels); a plain `<video>` element with the HLS stream
+is used as a fallback and in the desktop preview.
+
+### Remote control
+
+| Key | Browsing | Player |
+| --- | --- | --- |
+| ◀ ▲ ▼ ▶ | Move focus | ◀ ▶ seek ±10 s · ▲ ▼ previous / next subtitle line |
+| OK | Open | Play / pause |
+| ⏪ ⏩ | — | Seek ±30 s |
+| 🔴 Red | — | Original / translated / bilingual |
+| 🟢 Green | — | Side panel / bottom caption / hidden |
+| 🟡 Yellow | — | Repeat the current line |
+| 🔵 Blue | — | Subtitle text size |
+| Back | Back (press twice on the home screen to exit) | Leave the player (Stop works too) |
+
+Target language, display mode, layout and text size are also under
+**Settings** in the app.
+
+### Build and preview
+
+```powershell
+npm run build:tv   # → build/tv/app/ (config.xml, index.html, js/, css/, icon.png)
+npm run serve:tv   # → http://localhost:8787/ (1920×1080, keyboard: arrows, Enter, Esc, r/g/y/b)
+```
+
+### Install on your TV
+
+1. Install [Tizen Studio](https://developer.samsung.com/smarttv/develop/getting-started/setting-up-sdk/installing-tv-sdk.html)
+   with the **TV Extensions** and **Samsung Certificate Extension** packages
+   (Package Manager → Extension SDK).
+2. Enable **Developer Mode** on the TV: open **Apps**, press `1 2 3 4 5` on the
+   remote, switch Developer mode **On**, enter your PC's IP address, and
+   restart the TV.
+3. In Tizen Studio's **Certificate Manager**, create a **Samsung** certificate
+   profile (TV). Signing in with a Samsung account adds your TV's DUID to the
+   distributor certificate; connect to the TV first (step 4) so it is
+   detected. Mark the profile as active.
+4. With the TV and PC on the same network:
+
+   ```powershell
+   npm run install:tv -- --tv 192.168.1.50            # your TV's IP
+   npm run install:tv -- --tv 192.168.1.50 --profile MyTvProfile
+   ```
+
+   This builds, signs and packages the `.wgt`, runs `sdb connect`, installs
+   it and launches **NRK Subtitle Studio**. Set `TIZEN_STUDIO` if Tizen Studio
+   isn't in `C:\tizen-studio` or `~/tizen-studio`. `npm run package:tv` only
+   produces the signed `.wgt` (in `build/tv/`), which you can also install
+   from Tizen Studio's Device Manager.
+
+### Notes
+
+- Most NRK content is **only available in Norway**; elsewhere NRK returns a
+  "not available" message or the stream fails.
+- NRK's API only allows cross-origin requests from `tv.nrk.no`. Packaged TV
+  apps normally aren't subject to CORS. If yours is and lists don't load, run
+  `npm run serve:tv` on a computer on the same network and enter
+  `<computer-ip>:8787` under **Settings → Proxy server** in the app. The proxy
+  only forwards requests to `nrk.no` and `translate.googleapis.com`.
+- Live channels have no subtitle file, so the panel is hidden on live TV.
+- The app keeps your settings and resume positions in the TV's local storage.
 
 ## Releasing to the Chrome Web Store
 
@@ -260,6 +342,8 @@ NRK-Subtitle-Studio/
 ├── tsconfig.json
 ├── scripts/
 │   ├── build.mjs              esbuild bundler (one-off + --watch)
+│   ├── build-tv.mjs           Samsung TV app build / package / install
+│   ├── tv-server.mjs          TV preview server + NRK/Google proxy
 │   └── pack-*.mjs             Chrome package builders
 ├── public/
 │   └── icons/                 Toolbar and web-store icons
@@ -291,11 +375,22 @@ NRK-Subtitle-Studio/
     │       ├── toast.ts       Short-lived notices
     │       └── window-interactions.ts Drag, resize and size persistence
     ├── shared/
-    │   └── extension/
-    │       ├── messages.ts    Shared request/response contracts
-    │       └── runtime.ts     Typed Chrome runtime boundary
-    └── styles/
-        └── overlay.css        Overlay styles
+    │   ├── extension/
+    │   │   ├── messages.ts    Shared request/response contracts
+    │   │   └── runtime.ts     Typed Chrome runtime boundary
+    │   └── subtitles/
+    │       └── vtt.ts         WebVTT parser (extension + TV app)
+    ├── styles/
+    │   └── overlay.css        Overlay styles
+    └── tv/                    Samsung Tizen TV app
+        ├── index.ts           Entry point
+        ├── app.ts / focus.ts / keys.ts  Screen stack, spatial navigation, remote keys
+        ├── nrk.ts / net.ts    NRK API client and fetch (with optional proxy)
+        ├── media.ts           AVPlay and <video> playback backends
+        ├── translate.ts       Background subtitle translation
+        ├── screens/           Home (front page, live, search, settings), series, player
+        ├── static/            config.xml and index.html
+        └── styles.css         1920×1080 TV styles
 ```
 
 The content entry point composes these domains. Shared extension contracts contain

@@ -1,6 +1,6 @@
 {
   "name": "nrk-subtitle-studio",
-  "version": "0.5.2",
+  "version": "0.6.0",
   "private": true,
   "description": "Chrome extension that loads every NRK TV subtitle into a scrolling, time-synced overlay you can click to seek, translate with Google Translate, and download as an .srt file. Great for learning Norwegian.",
   "license": "MIT",
@@ -14,7 +14,12 @@
     "rebuild": "npm run clean && npm run build",
     "zip": "npm run rebuild && node scripts/pack-zip.mjs",
     "crx": "npm run rebuild && node scripts/pack-crx.mjs",
-    "package": "npm run clean:all && npm run build && node scripts/pack-zip.mjs && node scripts/pack-crx.mjs"
+    "package": "npm run clean:all && npm run build && node scripts/pack-zip.mjs && node scripts/pack-crx.mjs",
+    "build:tv": "npm run typecheck && node scripts/build-tv.mjs",
+    "watch:tv": "node scripts/build-tv.mjs --watch",
+    "serve:tv": "node scripts/tv-server.mjs",
+    "package:tv": "npm run typecheck && node scripts/build-tv.mjs --package",
+    "install:tv": "npm run typecheck && node scripts/build-tv.mjs --install"
   },
   "devDependencies": {
     "archiver": "^8.0.0",
