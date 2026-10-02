@@ -10,7 +10,6 @@
     "typecheck": "tsc -p .",
     "icons": "node scripts/generate-icons.mjs",
     "build": "npm run typecheck && npm run icons && node scripts/build.mjs",
-    "build:tizenbrew": "npm run typecheck && node scripts/build-tizenbrew.mjs",
     "watch": "node scripts/build.mjs --watch",
     "rebuild": "npm run clean && npm run build",
     "zip": "npm run rebuild && node scripts/pack-zip.mjs",

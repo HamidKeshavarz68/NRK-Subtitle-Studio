@@ -21,7 +21,6 @@ panel that:
 
 - [Install from the Chrome Web Store](#install-from-the-chrome-web-store)
 - [Install (unpacked)](#install-unpacked)
-- [Samsung TV (TizenBrew)](#samsung-tv-tizenbrew)
 - [Toolbar controls](#toolbar-controls)
 - [Scripts](#scripts)
 - [Releasing to the Chrome Web Store](#releasing-to-the-chrome-web-store)
@@ -78,60 +77,7 @@ Then:
 > `/episode/`, `/program/`, `/direkte/`, `/film/`, `/se/`). The main /
 > category pages of `tv.nrk.no` stay clean.
 
-## Samsung TV (TizenBrew)
-
-Samsung (Tizen) TVs can't run Chrome extensions, but
-[TizenBrew](https://github.com/reisxd/TizenBrew) can open a website on the TV
-and inject a script into it. This repo builds such a **site modification
-module** from the same sources as the extension:
-
-```powershell
-npm install
-npm run build:tizenbrew
-```
-
-That writes `build/tizenbrew/`:
-
-- `userScript.js` — the content script with the stylesheet and icon inlined,
-  syntax-lowered for older TV browsers (Chromium 56 / 2018 TVs and newer).
-- `package.json` — the TizenBrew module manifest (`packageType: "mods"`,
-  `websiteURL: https://tv.nrk.no/`, `main: userScript.js`).
-
-How it differs from the extension: there is no background service worker on
-the TV, so `src/tizen/` replaces the `platform/*` modules at build time and the
-requests in `src/shared/extension/request-handler.ts` run directly from the
-`tv.nrk.no` page (NRK's playback API and Google Translate both allow that
-origin). DeepL's API doesn't allow browser requests, so on the TV a DeepL
-selection falls back to Google.
-
-TizenBrew loads modules through jsDelivr. The
-[`tizenbrew.yml`](.github/workflows/tizenbrew.yml) workflow rebuilds the module
-on every push to `main` (or manually from the Actions tab) and force-pushes it
-to the `tizenbrew` branch, so the module name is:
-
-```
-gh/HamidKeshavarz68/NRK-Subtitle-Studio@tizenbrew
-```
-
-Install on the TV:
-
-1. Turn on **Developer Mode** on the TV (Apps → type `12345` → Developer mode
-   **On**, Host PC IP = your PC/phone's IP → reboot).
-2. Install TizenBrew — either with the
-   [TizenBrew Installer](https://github.com/reisxd/TizenBrewInstaller/releases/latest)
-   or by side-loading `TizenBrewStandalone-Old.wgt` from the
-   [TizenBrew releases](https://github.com/reisxd/TizenBrew/releases/latest)
-   with an app such as App2Samsung.
-3. Open TizenBrew → **Module Manager** → add a **GitHub** module and enter
-   `HamidKeshavarz68/NRK-Subtitle-Studio@tizenbrew`.
-4. Launch **NRK Subtitle Studio** from TizenBrew. It opens `tv.nrk.no` with
-   the subtitle overlay.
-
-jsDelivr caches branches for up to 12 hours; the workflow purges the cache
-after each publish.
-
 ## Toolbar controls
-
 
 | Control | What it does |
 | --- | --- |
@@ -156,7 +102,6 @@ bugs, issues and suggestions.
 | --- | --- |
 | `npm run typecheck` | Type-check the sources with `tsc` (no emit). |
 | `npm run build` | Type-check, then bundle TypeScript → `dist/` with esbuild. |
-| `npm run build:tizenbrew` | Type-check, then build the Samsung TV [TizenBrew](#samsung-tv-tizenbrew) module → `build/tizenbrew/`. |
 | `npm run watch` | Rebuild on change (esbuild watch mode). |
 | `npm run clean` | Delete the `dist/` folder. |
 | `npm run rebuild` | `clean` + `build`. |
@@ -315,7 +260,6 @@ NRK-Subtitle-Studio/
 ├── tsconfig.json
 ├── scripts/
 │   ├── build.mjs              esbuild bundler (one-off + --watch)
-│   ├── build-tizenbrew.mjs    Samsung TV (TizenBrew) module builder
 │   └── pack-*.mjs             Chrome package builders
 ├── public/
 │   └── icons/                 Toolbar and web-store icons
@@ -329,7 +273,6 @@ NRK-Subtitle-Studio/
     │   │   ├── state.ts       Application state and persisted settings
     │   │   └── utils.ts       Shared text, cue, time and storage helpers
     │   ├── platform/
-    │   │   ├── extension-info.ts Extension icon URL and version
     │   │   └── runtime-client.ts Typed content-to-service-worker adapter
     │   ├── subtitles/
     │   │   ├── download.ts    Full-programme SRT export
@@ -350,11 +293,9 @@ NRK-Subtitle-Studio/
     ├── shared/
     │   └── extension/
     │       ├── messages.ts    Shared request/response contracts
-    │       ├── request-handler.ts NRK fetches and translation calls
     │       └── runtime.ts     Typed Chrome runtime boundary
-    ├── styles/
-    │   └── overlay.css        Overlay styles
-    └── tizen/                 Samsung TV (TizenBrew) entry + platform/* replacements
+    └── styles/
+        └── overlay.css        Overlay styles
 ```
 
 The content entry point composes these domains. Shared extension contracts contain
