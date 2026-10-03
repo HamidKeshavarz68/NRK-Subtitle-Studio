@@ -6,6 +6,63 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-10-03
+
+### Added
+
+- **DeepL in the Samsung TV app.** Settings has a new **DeepL API key** field
+  and a **Test DeepL key** button that checks the key and shows quota usage.
+  With a working key, subtitles are translated with DeepL. With no key, a
+  rejected key, a used-up quota, an unsupported target language or any other
+  DeepL error, the app falls back to Google Translate and shows a short notice.
+  The subtitle panel header shows which translator is in use.
+- **Favourites in the Samsung TV app.** A new **★ Favourites** item in the left
+  menu lists saved series and films, newest first, each with a **✕ Remove**
+  button. Series pages, films and episodes have a **☆ Add to favourites**
+  button. Favouriting an episode saves its series, not the single episode.
+  Favourites are stored on the TV (`nss.tv.favorites` in localStorage).
+- **TV details page.** Films and episodes now open a short details page before
+  playback (title, duration, age rating and description), with **▶ Watch**,
+  the favourite button and, for episodes, **☰ All episodes**. The front-page
+  hero's **Watch** button still starts playback directly.
+- **TV options strip.** Holding OK in the player opens a slim one-line strip
+  along the bottom edge with Subtitles, Layout, Text size, Repeat line and
+  Start over. ◀ ▶ choose, ▲ ▼ or OK change, Back closes. Playback doesn't stop,
+  and the strip closes by itself after 8 seconds.
+- **TV Guide.** A new **? Guide** item in the left menu with tips and tricks
+  for navigation, favourites, playback, subtitles and translation.
+- **Right-to-left subtitles on the TV.** Persian, Arabic, Urdu, Sorani and
+  Hebrew translations are laid out right to left.
+- TV subtitle sizes now go up to 84 px (24–84 px). With large text, the side
+  panel slides so the current line stays in view.
+- TV Settings explains the Proxy server field.
+
+### Changed
+
+- TV player: OK toggles play/pause without opening any window; hold OK for
+  the options. The colour keys are no longer needed; where they work they
+  remain shortcuts.
+
+- DeepL request helpers moved to `src/shared/translation/deepl.ts` and are
+  shared by the extension's service worker and the TV app.
+- `npm run serve:tv`'s proxy also forwards DeepL API requests, including POST
+  and the `Authorization` header, which it forwards to DeepL only.
+- TV player: the playback bar is now a thin strip at the very bottom of the
+  screen, and the colour-key hints under it are gone.
+- TV front page redesigned to look like the NRK TV app:
+  - A full-width hero carousel with show logos, taglines, a **Watch** button
+    and dots. It rotates by itself or with Left/Right.
+  - Rows snap to the top as you move through them.
+  - Promo banners.
+  - Portrait rows, plus a ranked "Mest sett" row with large numbers.
+  - Episode cards show the duration and a short description.
+  - Row titles no longer include NRK's "Logg deg på…" login prompts.
+- `src/tv/screens/frontpage.ts` holds the new front page.
+
+### Fixed
+
+- TV Settings: the result of **Test connection** and the text below it can now be scrolled into view.
+
 ## [0.6.0] - 2026-10-03
 
 ### Added

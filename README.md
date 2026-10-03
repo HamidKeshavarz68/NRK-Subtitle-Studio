@@ -127,15 +127,26 @@ bugs, issues and suggestions.
 and newer) that brings the rolling, translated subtitle panel to the living
 room. It doesn't wrap tv.nrk.no; it talks to NRK's public API directly:
 
-- browse the NRK TV front page, live channels and search, with the remote,
+- browse an NRK-style front page (hero carousel, promo banners, "Mest sett"
+  and themed rows), live channels and search, with the remote,
 - open a series, pick a season and an episode, and play it,
+- open a film or an episode to see its details first, then **▶ Watch**,
+- keep **favourite** series and films under **★ Favourites** in the menu: use
+  **☆ Add to favourites** on a series, film or episode page (favouriting an
+  episode saves its series) and **✕ Remove** to take one off the list,
 - read the subtitles in a **side panel** (2 past + 8 upcoming lines) or as a
   **bottom caption**, in Norwegian, translated, or bilingual,
-- step line by line, repeat a line, and resume where you left off.
+- step line by line, repeat a line, and resume where you left off,
+- change subtitle mode, layout and text size (24–84 px) while watching from a
+  slim options strip (**hold OK**) that keeps the subtitles readable,
+- read Persian, Arabic, Urdu, Sorani and Hebrew translations right to left,
+- read tips and tricks under **? Guide** in the menu.
 
 Programmes are played with Samsung's AVPlay (NRK serves DASH to TVs and
 AES-128 HLS for live channels); a plain `<video>` element with the HLS stream
-is used as a fallback and in the desktop preview.
+is used as a fallback and in the desktop preview. There is no playback-speed
+control on the TV: Samsung TVs mute the audio at any speed other than 1×, with
+both AVPlay and `<video>`.
 
 ### Remote control
 
@@ -143,15 +154,31 @@ is used as a fallback and in the desktop preview.
 | --- | --- | --- |
 | ◀ ▲ ▼ ▶ | Move focus | ◀ ▶ seek ±10 s · ▲ ▼ previous / next subtitle line |
 | OK | Open | Play / pause |
+| Hold OK | — | Options strip along the bottom edge (subtitles, layout, text size, repeat line, start over); ◀ ▶ choose, ▲ ▼ or OK change, Back closes. Playback continues |
+| ▶❚❚ | — | Play / pause |
 | ⏪ ⏩ | — | Seek ±30 s |
-| 🔴 Red | — | Original / translated / bilingual |
-| 🟢 Green | — | Side panel / bottom caption / hidden |
-| 🟡 Yellow | — | Repeat the current line |
-| 🔵 Blue | — | Subtitle text size |
-| Back | Back (press twice on the home screen to exit) | Leave the player (Stop works too) |
+| Back | Back (press twice on the home screen to exit) | Close the options strip, or leave the player (Stop works too) |
 
-Target language, display mode, layout and text size are also under
+The colour keys aren't needed. On remotes that have them, they still work as
+shortcuts (red: display mode, green: layout, yellow: repeat line, blue: text
+size). Target language, display mode, layout and text size are also under
 **Settings** in the app.
+
+**Proxy server (optional).** NRK's API only allows browser requests from
+tv.nrk.no, but the packaged TV app is allowed to talk to NRK directly, so this
+setting is normally left empty (**Test connection** says "Connected directly
+to NRK"). If the TV can't reach NRK directly, or you're using the desktop
+preview, run `npm run serve:tv` on a computer on the same network and enter its
+address (e.g. `192.168.1.20:8787`) under **Settings → Proxy server**. It
+forwards the NRK and DeepL requests.
+
+**DeepL (optional).** Paste a DeepL API key under **Settings → DeepL API key**
+(free `:fx` and Pro keys both work) and press OK; **Test DeepL key** shows
+whether it works and how much of your quota is used. Subtitles are then
+translated with DeepL. With no key, a rejected key, a used-up quota, a target
+language DeepL doesn't support, or any other DeepL error, the app falls back to
+Google Translate and the subtitle panel header shows which one is in use
+(`· DeepL` / `· Google`).
 
 ### Build and preview
 
@@ -193,7 +220,8 @@ npm run serve:tv   # → http://localhost:8787/ (1920×1080, keyboard: arrows, E
   apps normally aren't subject to CORS. If yours is and lists don't load, run
   `npm run serve:tv` on a computer on the same network and enter
   `<computer-ip>:8787` under **Settings → Proxy server** in the app. The proxy
-  only forwards requests to `nrk.no` and `translate.googleapis.com`.
+  only forwards requests to `nrk.no`, `translate.googleapis.com` and DeepL's
+  API (the only host it forwards POSTs and the `Authorization` header to).
 - Live channels have no subtitle file, so the panel is hidden on live TV.
 - The app keeps your settings and resume positions in the TV's local storage.
 
@@ -343,7 +371,7 @@ NRK-Subtitle-Studio/
 ├── scripts/
 │   ├── build.mjs              esbuild bundler (one-off + --watch)
 │   ├── build-tv.mjs           Samsung TV app build / package / install
-│   ├── tv-server.mjs          TV preview server + NRK/Google proxy
+│   ├── tv-server.mjs          TV preview server + NRK/Google/DeepL proxy
 │   └── pack-*.mjs             Chrome package builders
 ├── public/
 │   └── icons/                 Toolbar and web-store icons
@@ -378,8 +406,10 @@ NRK-Subtitle-Studio/
     │   ├── extension/
     │   │   ├── messages.ts    Shared request/response contracts
     │   │   └── runtime.ts     Typed Chrome runtime boundary
-    │   └── subtitles/
-    │       └── vtt.ts         WebVTT parser (extension + TV app)
+    │   ├── subtitles/
+    │   │   └── vtt.ts         WebVTT parser (extension + TV app)
+    │   └── translation/
+    │       └── deepl.ts       DeepL request helpers (extension + TV app)
     ├── styles/
     │   └── overlay.css        Overlay styles
     └── tv/                    Samsung Tizen TV app
@@ -387,8 +417,10 @@ NRK-Subtitle-Studio/
         ├── app.ts / focus.ts / keys.ts  Screen stack, spatial navigation, remote keys
         ├── nrk.ts / net.ts    NRK API client and fetch (with optional proxy)
         ├── media.ts           AVPlay and <video> playback backends
-        ├── translate.ts       Background subtitle translation
-        ├── screens/           Home (front page, live, search, settings), series, player
+        ├── translate.ts       Background subtitle translation (DeepL → Google fallback)
+        ├── favorites.ts       Favourite series and films (localStorage)
+        ├── screens/           Home (favourites, live, search, settings), frontpage,
+        │                      series, details (Watch / Favourite), guide, player
         ├── static/            config.xml and index.html
         └── styles.css         1920×1080 TV styles
 ```

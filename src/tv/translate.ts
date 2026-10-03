@@ -1,18 +1,78 @@
 /**
- * Translates a whole subtitle file in the background using Google's free
- * "gtx" endpoint. Work starts at the current playback position and continues
- * forward, so the lines you are about to see are translated first.
+ * Translates a whole subtitle file in the background. Uses DeepL when an API
+ * key is set in Settings and falls back to Google's free "gtx" endpoint when
+ * there is no key, DeepL rejects it, or a DeepL request fails. Work starts at
+ * the current playback position and continues forward, so the lines you are
+ * about to see are translated first.
  */
 
 import { TRANSLATE } from "../content/core/config";
 import type { SubtitleCue } from "../shared/subtitles/vtt";
-import { fetchText } from "./net";
+import {
+  deeplApiBase,
+  deeplHeaders,
+  deeplTargetLang,
+  deeplTranslateBody,
+  parseDeeplTranslations,
+} from "../shared/translation/deepl";
+import { fetchText, HttpError } from "./net";
+import { settings } from "./settings";
 
 const MAX_CHARS = 1200;
 const MAX_ITEMS = 60;
 const SPLIT_RE = /\s*@@@\s*/g;
 
 const cache: Record<string, string> = {};
+
+export type Provider = "deepl" | "google";
+
+/** Last key DeepL refused (bad key or quota used up); skipped until the key changes. */
+let rejected: { key: string; reason: string } | null = null;
+
+function deeplRejection(e: unknown): string {
+  if (!(e instanceof HttpError)) return "";
+  if (e.status === 401 || e.status === 403) return "DeepL key rejected";
+  if (e.status === 456) return "DeepL quota used up";
+  return "";
+}
+
+async function deepl(texts: string[], targetLang: string, key: string): Promise<string[]> {
+  const raw = await fetchText(deeplApiBase(key) + "/translate", {
+    method: "POST",
+    headers: deeplHeaders(key),
+    body: deeplTranslateBody(texts, targetLang),
+  });
+  const out = parseDeeplTranslations(JSON.parse(raw));
+  if (out.length !== texts.length) throw new Error(`DeepL returned ${out.length} of ${texts.length} lines`);
+  return out;
+}
+
+/** Check a DeepL key against /v2/usage and describe the result for the Settings screen. */
+export async function checkDeeplKey(rawKey: string): Promise<string> {
+  const key = rawKey.trim();
+  if (!key) return "No DeepL key: subtitles are translated with Google Translate.";
+  try {
+    const raw = await fetchText(deeplApiBase(key) + "/usage", {
+      headers: { Authorization: deeplHeaders(key).Authorization },
+    });
+    if (rejected && rejected.key === key) rejected = null;
+    const usage = JSON.parse(raw) as { character_count?: unknown; character_limit?: unknown };
+    const used = Number(usage.character_count);
+    const limit = Number(usage.character_limit);
+    const detail = isFinite(used) && isFinite(limit) && limit > 0
+      ? ` (${used.toLocaleString()} of ${limit.toLocaleString()} characters used this period)`
+      : "";
+    return "DeepL key works" + detail + ". Subtitles will be translated with DeepL.";
+  } catch (e) {
+    const rejection = deeplRejection(e);
+    if (rejection) {
+      rejected = { key, reason: rejection };
+      return rejection + ". Subtitles will be translated with Google Translate.";
+    }
+    const msg = e instanceof Error ? e.message : String(e);
+    return `Could not reach DeepL (${msg}). Subtitles will fall back to Google Translate.`;
+  }
+}
 
 function sourceFor(lang: string): string {
   return /^(nb|nn|no)/i.test(lang) ? "no" : "auto";
@@ -36,6 +96,10 @@ export class CueTranslator {
   /** Translations by cue index; undefined = not done yet. */
   readonly out: (string | undefined)[];
   failed = false;
+  /** Who translated the most recent batch; null until the first one is done. */
+  provider: Provider | null = null;
+  /** Why DeepL isn't used although a key is set ("" when it is, or when there's no key). */
+  deeplIssue = "";
   private cursor = 0;
   private running = false;
   private stopped = false;
@@ -124,8 +188,44 @@ export class CueTranslator {
     }
   }
 
+  /** The DeepL key to try for the next batch, or "" to go straight to Google. */
+  private deeplKey(): string {
+    const key = settings.deeplApiKey.trim();
+    if (!key) {
+      this.deeplIssue = "";
+      return "";
+    }
+    if (!deeplTargetLang(this.target)) {
+      this.deeplIssue = "language not supported by DeepL";
+      return "";
+    }
+    if (rejected && rejected.key === key) {
+      this.deeplIssue = rejected.reason;
+      return "";
+    }
+    return key;
+  }
+
   private async translateBatch(indices: number[]): Promise<void> {
     const texts = indices.map((i) => this.cues[i].text);
+
+    const key = this.deeplKey();
+    if (key) {
+      try {
+        const parts = await deepl(texts, deeplTargetLang(this.target)!, key);
+        indices.forEach((idx, k) => this.store(idx, parts[k].trim()));
+        this.provider = "deepl";
+        this.deeplIssue = "";
+        return;
+      } catch (e) {
+        console.warn("[nss-tv] DeepL failed, using Google Translate", e);
+        const rejection = deeplRejection(e);
+        if (rejection) rejected = { key, reason: rejection };
+        this.deeplIssue = rejection || "DeepL unavailable";
+      }
+    }
+
+    this.provider = "google";
     const joined = texts.join(TRANSLATE.separator);
     const result = await gtx(this.source, this.target, joined);
     const parts = result.split(SPLIT_RE);

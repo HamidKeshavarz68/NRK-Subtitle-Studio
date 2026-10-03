@@ -45,30 +45,31 @@ function viaProxy(base: string, url: string): string {
   return base + "/proxy?url=" + encodeURIComponent(url);
 }
 
-async function read(url: string, original: string): Promise<string> {
-  const res = await fetch(url, { credentials: "omit" });
+async function read(url: string, original: string, init?: RequestInit): Promise<string> {
+  const res = await fetch(url, { ...init, credentials: "omit" });
   if (!res.ok) throw new HttpError(res.status, original);
   return res.text();
 }
 
-export async function fetchText(url: string): Promise<string> {
+/** GET (or, with `init`, any request) directly, or through the proxy when direct access is blocked. */
+export async function fetchText(url: string, init?: RequestInit): Promise<string> {
   const proxy = proxyBase();
   const servedOverHttp = location.protocol === "http:" || location.protocol === "https:";
 
   // A desktop browser always enforces CORS, so go straight to the proxy there.
   if (proxy && (directWorks === false || (servedOverHttp && directWorks === null))) {
-    return read(viaProxy(proxy, url), url);
+    return read(viaProxy(proxy, url), url, init);
   }
 
   try {
-    const text = await read(url, url);
+    const text = await read(url, url, init);
     directWorks = true;
     return text;
   } catch (e) {
     if (e instanceof HttpError) throw e;
     if (!proxy) throw new BlockedError(url);
     directWorks = false;
-    return read(viaProxy(proxy, url), url);
+    return read(viaProxy(proxy, url), url, init);
   }
 }
 

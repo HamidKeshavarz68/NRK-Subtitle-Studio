@@ -176,9 +176,11 @@ export function createAvplayBackend(ev: MediaEvents): MediaBackend {
         av.open(url);
         opened = true;
         av.setListener({
-          onbufferingstart: () => ev.onWaiting(),
+          onbufferingstart: () => {
+            if (!dead) ev.onWaiting();
+          },
           onbufferingcomplete: () => {
-            if (!pausedFlag) ev.onPlaying();
+            if (!pausedFlag && !dead) ev.onPlaying();
           },
           oncurrentplaytime: (ms: number) => {
             timeMs = ms;
@@ -208,6 +210,7 @@ export function createAvplayBackend(ev: MediaEvents): MediaBackend {
               durationMs = 0;
             }
             ev.onReady();
+            if (dead) return;
             if (pendingSeek >= 0) {
               doSeek(pendingSeek);
               pendingSeek = -1;
@@ -223,6 +226,7 @@ export function createAvplayBackend(ev: MediaEvents): MediaBackend {
       }
     },
     play() {
+      if (dead) return;
       if (!ready) {
         pendingPlay = true;
         return;

@@ -1,7 +1,8 @@
 /** Series detail: backdrop, season chips and the list of available episodes. */
 
-import { cardEl, onActivate, push, type Screen } from "../app";
+import { cardEl, onActivate, push, toast, type Screen } from "../app";
 import { clear, errorBox, h, lazyBg, spinner } from "../dom";
+import { addFavorite, isFavorite, removeFavorite, updateFavorite, type Favorite } from "../favorites";
 import { focusFirst } from "../focus";
 import { getEpisodes, getSeries, type Season } from "../nrk";
 import { createPlayer } from "./player";
@@ -10,9 +11,35 @@ export function createSeries(id: string, fallbackTitle: string): Screen {
   const backdrop = h("div", { class: "backdrop" });
   const title = h("h1", { class: "series-title", text: fallbackTitle });
   const desc = h("p", { class: "series-desc" });
+  const favTarget: Favorite = { kind: "series", id, title: fallbackTitle };
+  const fav = h("div", { class: "button details-btn fav-btn focusable" });
+  const renderFav = () => {
+    const on = isFavorite("series", id);
+    fav.textContent = on ? "★  In favourites" : "☆  Add to favourites";
+    fav.classList.toggle("on", on);
+  };
+  onActivate(fav, () => {
+    if (isFavorite("series", id)) {
+      removeFavorite("series", id);
+      toast("Removed from favourites");
+    } else {
+      addFavorite({ ...favTarget });
+      toast("Added to favourites");
+    }
+    renderFav();
+  });
+  renderFav();
   const seasonsRow = h("div", { class: "chips scroll-x", "data-remember": "" });
   const episodes = h("div", { class: "grid episodes" }, spinner());
-  const body = h("div", { class: "series-body scroll-y" }, title, desc, seasonsRow, episodes);
+  const body = h(
+    "div",
+    { class: "series-body scroll-y" },
+    title,
+    desc,
+    h("div", { class: "details-actions" }, fav),
+    seasonsRow,
+    episodes
+  );
   const el = h("div", { class: "screen series" }, backdrop, body);
 
   let seq = 0;
@@ -49,6 +76,11 @@ export function createSeries(id: string, fallbackTitle: string): Screen {
     .then((info) => {
       title.textContent = info.title;
       desc.textContent = info.description;
+      favTarget.title = info.title || fallbackTitle;
+      favTarget.subtitle = info.description || undefined;
+      favTarget.image = info.image;
+      // Refresh a stale saved entry (e.g. one added from an episode before the series loaded).
+      updateFavorite({ ...favTarget });
       lazyBg(backdrop, info.backdrop || info.image);
 
       if (!info.seasons.length) {
@@ -77,5 +109,5 @@ export function createSeries(id: string, fallbackTitle: string): Screen {
       episodes.appendChild(errorBox(err));
     });
 
-  return { el };
+  return { el, onResume: renderFav };
 }
