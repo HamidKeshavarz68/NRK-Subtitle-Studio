@@ -3,7 +3,11 @@
  * Requests are authenticated with the `Authorization: DeepL-Auth-Key` header.
  */
 
-/** Map our BCP-47 base codes to DeepL target languages; null = unsupported. */
+/**
+ * Map our BCP-47 base codes to DeepL target languages; null = unsupported.
+ * See https://developers.deepl.com/docs/getting-started/supported-languages
+ * (Somali and Tigrinya aren't offered by DeepL and use Google Translate).
+ */
 export function deeplTargetLang(base: string): string | null {
   const code = (base || "").toLowerCase().split("-")[0];
   const map: Record<string, string> = {
@@ -13,6 +17,8 @@ export function deeplTargetLang(base: string): string | null {
     it: "IT", ja: "JA", ko: "KO", lt: "LT", lv: "LV", nl: "NL",
     pl: "PL", ro: "RO", ru: "RU", sk: "SK", sl: "SL", sv: "SV",
     tr: "TR", uk: "UK",
+    fa: "FA", ur: "UR", hi: "HI", az: "AZ", tl: "TL", vi: "VI",
+    th: "TH", he: "HE", iw: "HE", ckb: "CKB", ku: "KMR",
   };
   return map[code] ?? null;
 }

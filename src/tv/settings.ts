@@ -17,9 +17,17 @@ export interface TvSettings {
   proxyUrl: string;
   /** Optional DeepL API key; empty = use Google Translate. */
   deeplApiKey: string;
+  /** Playback speed for on-demand programmes (1 = normal). */
+  playbackRate: number;
 }
 
 export const FONT_SIZES = [24, 28, 32, 36, 42, 48, 56, 64, 72, 84];
+export const SPEEDS = [0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 1, 1.05, 1.1, 1.2, 1.3, 1.4];
+
+/** "0.9×" */
+export function formatRate(rate: number): string {
+  return String(rate) + "×";
+}
 export const DISPLAY_MODES: { code: DisplayMode; name: string }[] = [
   { code: "bilingual", name: "Bilingual" },
   { code: "original", name: "Original only" },
@@ -47,6 +55,7 @@ const DEFAULTS: TvSettings = {
   fontSize: 32,
   proxyUrl: "",
   deeplApiKey: "",
+  playbackRate: 1,
 };
 
 function load(): TvSettings {
@@ -63,6 +72,9 @@ function load(): TvSettings {
       }
       if (typeof parsed.proxyUrl === "string") out.proxyUrl = parsed.proxyUrl;
       if (typeof parsed.deeplApiKey === "string") out.deeplApiKey = parsed.deeplApiKey;
+      if (typeof parsed.playbackRate === "number" && SPEEDS.indexOf(parsed.playbackRate) !== -1) {
+        out.playbackRate = parsed.playbackRate;
+      }
     }
   } catch {
     // Corrupt or unavailable storage: fall back to defaults.

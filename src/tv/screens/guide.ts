@@ -43,12 +43,22 @@ const SECTIONS: Section[] = [
     ],
   },
   {
-    title: "Options strip (hold OK)",
+    title: "Options strip (⚙)",
     tips: [
-      "Hold OK for about a second to open a slim strip along the bottom edge. The video keeps playing.",
-      "◀ ▶ choose an option, ▲ ▼ (or OK) change it: Subtitles, Layout and Text size.",
+      "Pause with OK, press ◀ to move to the ⚙ icon in the player bar, then press OK. A slim strip opens along the bottom edge.",
+      "◀ ▶ choose an option, ▲ ▼ (or OK) change it: Speed, Subtitles, Layout and Text size.",
       "↺ Repeat line replays the current line. Great for listening practice. ⏮ Start over goes back to the beginning.",
       "Press Back to close the strip. It also closes by itself after a few seconds.",
+    ],
+  },
+  {
+    title: "Playback speed",
+    tips: [
+      "Slow programmes down (0.95× to 0.65×) or speed them up (1.05× to 1.4×) with Speed in the options strip or in Settings.",
+      "Voices keep their natural pitch, and the sound stays in sync with the picture.",
+      "When you change speed, the picture may pause for a second while the TV switches over.",
+      "The speed is remembered for the next programme. The player bar shows it (for example 0.9×) when it isn't 1×.",
+      "Live channels always play at normal speed.",
     ],
   },
   {

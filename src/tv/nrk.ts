@@ -401,6 +401,23 @@ export function pickStreams(assets: unknown[]): Stream[] {
   return out;
 }
 
+/**
+ * The DASH manifest for a programme, used for its separate audio track during
+ * slowed playback. Smart-TV user agents get it directly; elsewhere it is derived
+ * from the HLS URL (NRK's CDN serves both from the same path).
+ */
+export function dashTwin(streams: Stream[]): string | null {
+  for (const s of streams) if (s.format === "dash") return s.url;
+  for (const s of streams) {
+    const m = /^(.*)\/muxed\.m3u8(\?.*)?$/.exec(s.url);
+    if (m) {
+      const adap = /[?&](adap=[^&]*)/.exec(m[2] || "");
+      return m[1] + "/dash.mpd" + (adap ? "?" + adap[1] : "");
+    }
+  }
+  return null;
+}
+
 /** Prefer the default-on track, then any Norwegian non-SDH track, then the first one. */
 export function pickSubtitleTrack(tracks: SubtitleTrack[]): SubtitleTrack | null {
   return (

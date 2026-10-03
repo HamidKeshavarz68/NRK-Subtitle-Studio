@@ -532,8 +532,16 @@ html.avplay, html.avplay body, html.avplay .player, html.avplay .stage, html.avp
   -webkit-align-items: center; align-items: center;
   height: 32px;
 }
-.play-icon { width: 34px; font-size: 20px; }
+.play-icon, .gear-icon {
+  width: 34px; height: 30px; line-height: 30px;
+  font-size: 20px; text-align: center;
+  border-radius: 6px;
+}
+.gear-icon { margin-right: 6px; font-size: 26px; color: #d5d8e3; }
+.play-icon.on, .gear-icon.on { background: #fff; color: #0b0d12; }
 .time { width: 100px; font-size: 20px; color: #d5d8e3; text-align: center; }
+.osd-rate { font-size: 18px; font-weight: 700; color: #0b0d12; background: #d5d8e3; border-radius: 4px; padding: 0 6px; }
+.osd-rate:empty { display: none; }
 .progress {
   -webkit-flex: 1; flex: 1;
   height: 5px; border-radius: 3px;

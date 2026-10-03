@@ -137,24 +137,31 @@ room. It doesn't wrap tv.nrk.no; it talks to NRK's public API directly:
 - read the subtitles in a **side panel** (2 past + 8 upcoming lines) or as a
   **bottom caption**, in Norwegian, translated, or bilingual,
 - step line by line, repeat a line, and resume where you left off,
-- change subtitle mode, layout and text size (24–84 px) while watching from a
-  slim options strip (**hold OK**) that keeps the subtitles readable,
+- **change the playback speed** (0.65×–1.4×) with natural-sounding voices that
+  stay in sync with the picture,
+- change speed, subtitle mode, layout and text size (24–84 px) while watching
+  from a slim options strip (pause, then **◀ ⚙ OK**) that keeps the subtitles readable,
 - read Persian, Arabic, Urdu, Sorani and Hebrew translations right to left,
 - read tips and tricks under **? Guide** in the menu.
 
 Programmes are played with Samsung's AVPlay (NRK serves DASH to TVs and
 AES-128 HLS for live channels); a plain `<video>` element with the HLS stream
-is used as a fallback and in the desktop preview. There is no playback-speed
-control on the TV: Samsung TVs mute the audio at any speed other than 1×, with
-both AVPlay and `<video>`.
+is used as a fallback and in the desktop preview.
+
+Samsung TVs mute their own audio at any speed other than 1× (both AVPlay and
+`<video>`), so other speeds bring their own sound: the picture plays in a
+muted `<video>` at the chosen rate, while the app fetches NRK's separate DASH
+audio track, decodes it with Web Audio, time-stretches it with WSOLA (pitch
+preserved) and schedules it against the video clock (`src/tv/audio/`). Back at
+1× the player returns to AVPlay. Live channels always play at 1×.
 
 ### Remote control
 
 | Key | Browsing | Player |
 | --- | --- | --- |
-| ◀ ▲ ▼ ▶ | Move focus | ◀ ▶ seek ±10 s · ▲ ▼ previous / next subtitle line |
+| ◀ ▲ ▼ ▶ | Move focus | ◀ ▶ seek ±10 s (while paused: move between ⚙ and ▶) · ▲ ▼ previous / next subtitle line |
 | OK | Open | Play / pause |
-| Hold OK | — | Options strip along the bottom edge (subtitles, layout, text size, repeat line, start over); ◀ ▶ choose, ▲ ▼ or OK change, Back closes. Playback continues |
+| OK on ⚙ (paused) | — | Options strip along the bottom edge (speed, subtitles, layout, text size, repeat line, start over); ◀ ▶ choose, ▲ ▼ or OK change, Back closes |
 | ▶❚❚ | — | Play / pause |
 | ⏪ ⏩ | — | Seek ±30 s |
 | Back | Back (press twice on the home screen to exit) | Close the options strip, or leave the player (Stop works too) |
@@ -417,6 +424,7 @@ NRK-Subtitle-Studio/
         ├── app.ts / focus.ts / keys.ts  Screen stack, spatial navigation, remote keys
         ├── nrk.ts / net.ts    NRK API client and fetch (with optional proxy)
         ├── media.ts           AVPlay and <video> playback backends
+        ├── audio/             Slowed-playback sound: DASH/AAC demux, WSOLA, Web Audio sync
         ├── translate.ts       Background subtitle translation (DeepL → Google fallback)
         ├── favorites.ts       Favourite series and films (localStorage)
         ├── screens/           Home (favourites, live, search, settings), frontpage,
