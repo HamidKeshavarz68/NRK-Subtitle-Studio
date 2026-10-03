@@ -3,19 +3,26 @@
  *
  * Remote:
  *   OK                play / pause
- *   hold OK           slim options strip along the bottom edge (subtitle mode,
- *                     layout, text size, repeat line, start over); playback
- *                     keeps going, Back closes it
  *   Play/Pause        play / pause
  *   ◀ ▶               seek -/+10 s        ⏪ ⏩  seek -/+30 s
+ *                     while paused: move between ⚙ and ▶ in the player bar;
+ *                     OK on ⚙ opens the slim options strip along the bottom
+ *                     edge (speed, subtitle mode, layout, text size, repeat
+ *                     line, start over), Back closes it
  *   ▲ ▼               previous / next subtitle line
  *   Back / Stop       leave the player
  *
  * The colour keys still work as shortcuts on remotes that have them, but
  * nothing depends on them.
+ *
+ * Speeds other than 1×: Samsung TVs mute their own audio at any rate but 1, so the
+ * programme switches from AVPlay to a muted <video> and the sound comes from
+ * NRK's DASH audio track, time-stretched in JavaScript (audio/stretch.ts).
  */
 
-import { keyUpWorks, pop, toast, type Screen } from "../app";
+import { pop, toast, type Screen } from "../app";
+import { parseDashAudio, type DashAudioTrack } from "../audio/dash";
+import { audioSupported, StretchedAudio } from "../audio/stretch";
 import { LANGS } from "../../content/core/config";
 import type { SubtitleCue } from "../../shared/subtitles/vtt";
 import { clear, formatTime, h, spinner } from "../dom";
@@ -23,11 +30,12 @@ import type { Key } from "../keys";
 import {
   createAvplayBackend, createHtml5Backend, hasAvplay, type MediaBackend, type MediaEvents,
 } from "../media";
+import { fetchText } from "../net";
 import {
-  getPlayback, loadCues, NotPlayableError, pickSubtitleTrack, type Playback, type Stream,
+  dashTwin, getPlayback, loadCues, NotPlayableError, pickSubtitleTrack, type Playback, type Stream,
 } from "../nrk";
 import {
-  cycle, DISPLAY_MODES, FONT_SIZES, isRtl, LAYOUTS, saveSettings, settings,
+  cycle, DISPLAY_MODES, FONT_SIZES, formatRate, isRtl, LAYOUTS, saveSettings, settings, SPEEDS,
   type DisplayMode, type SubtitleLayout,
 } from "../settings";
 import { CueTranslator } from "../translate";
@@ -36,10 +44,10 @@ const PAST = 2;
 const FUTURE = 8;
 const OSD_MS = 4000;
 const POS_KEY = "nss.tv.positions";
-/** How long OK must be held to open the options strip. */
-const HOLD_MS = 600;
 /** The options strip closes itself after this much inactivity. */
 const STRIP_IDLE_MS = 8000;
+/** Speed changes settle for this long before the player acts (switching backends is slow). */
+const SPEED_DELAY_MS = 500;
 
 const SHORT_MODE: Record<string, string> = { bilingual: "Bilingual", original: "Original", translated: "Translation" };
 const SHORT_LAYOUT: Record<string, string> = { side: "Side panel", bottom: "Bottom", off: "Hidden" };
@@ -148,7 +156,9 @@ export function createPlayer(kind: "program" | "channel", id: string, fallbackTi
   const fill = h("div", { class: "progress-fill" });
   const timeCur = h("span", { class: "time" });
   const timeDur = h("span", { class: "time" });
+  const gearIcon = h("span", { class: "gear-icon", text: "⚙" });
   const playIcon = h("span", { class: "play-icon", text: "▶" });
+  const rateBadge = h("span", { class: "osd-rate" });
   const osd = h(
     "div",
     { class: "osd" },
@@ -156,7 +166,7 @@ export function createPlayer(kind: "program" | "channel", id: string, fallbackTi
     h(
       "div",
       { class: "osd-bottom" },
-      h("div", { class: "osd-bar" }, playIcon, timeCur, h("div", { class: "progress" }, fill), timeDur)
+      h("div", { class: "osd-bar" }, gearIcon, playIcon, timeCur, h("div", { class: "progress" }, fill), timeDur, rateBadge)
     )
   );
 
@@ -173,9 +183,8 @@ export function createPlayer(kind: "program" | "channel", id: string, fallbackTi
   let stripOpen = false;
   let stripSel = 0;
   let stripTimer = 0;
-  /** Pending "OK held?" timer while OK is down (0 = OK not down). */
-  let okTimer = 0;
-  let lastToggleAt = 0;
+  /** Player-bar button highlighted while paused (◀ ▶ move between them). */
+  let ctrl: "play" | "gear" = "play";
   let resumeAt = -1;
   let resumeNotice = false;
   let pb: Playback | null = null;
@@ -188,6 +197,14 @@ export function createPlayer(kind: "program" | "channel", id: string, fallbackTi
   let osdTimer = 0;
   let destroyed = false;
   let lastSave = 0;
+  /** Supplies the sound while the video plays slowed and muted. */
+  let stretch: StretchedAudio | null = null;
+  let audioTrack: Promise<DashAudioTrack | null> | null = null;
+  /** Slowed playback failed for this programme; stay at 1×. */
+  let speedBroken = false;
+  /** <video> was started only for slowed playback (AVPlay is used at 1×). */
+  let speedSwitched = false;
+  let speedTimer = 0;
 
   const tick = window.setInterval(update, 200);
 
@@ -236,6 +253,104 @@ export function createPlayer(kind: "program" | "channel", id: string, fallbackTi
     settings.fontSize = px;
     saveSettings();
     applyLayout();
+  }
+
+  /* ------------------------------------------------------------- speed */
+
+  function wantedRate(): number {
+    return pb && !pb.isLive && !speedBroken ? settings.playbackRate : 1;
+  }
+
+  function loadAudioTrack(): Promise<DashAudioTrack | null> {
+    if (!audioTrack) {
+      const url = pb ? dashTwin(pb.streams) : null;
+      // NRK's CDN sends CORS headers, so this normally goes direct like the segments.
+      const direct = (u: string): Promise<string> =>
+        fetch(u, { credentials: "omit" }).then((r) => (r.ok ? r.text() : Promise.reject(new Error("HTTP " + r.status))));
+      audioTrack = url
+        ? direct(url)
+            .catch(() => fetchText(url))
+            .then((xml) => parseDashAudio(xml, url))
+            .catch(() => null)
+        : Promise.resolve(null);
+    }
+    return audioTrack;
+  }
+
+  function dropStretch(): void {
+    if (stretch) stretch.destroy();
+    stretch = null;
+  }
+
+  function firstUsable(backend: Candidate["backend"]): number {
+    for (let i = 0; i < candidates.length; i++) if (candidates[i].backend === backend && !failed[i]) return i;
+    return -1;
+  }
+
+  /** Restart on candidate `i` at the current position. */
+  function switchTo(i: number): void {
+    const t = curTime();
+    const playing = !isPaused();
+    if (kind === "program" && t > 0) resumeAt = t;
+    speedSwitched = candidates[i].backend === "html5" && hasAvplay();
+    startAt(i, playing);
+  }
+
+  function speedUnavailable(): void {
+    if (speedBroken || destroyed) return;
+    speedBroken = true;
+    toast("Slower speeds aren't available for this programme", 4000);
+    applySpeed();
+    if (stripOpen) renderStrip();
+  }
+
+  /** Bring the backend and the audio in line with the chosen speed. */
+  function applySpeed(): void {
+    const r = wantedRate();
+    rateBadge.textContent = r !== 1 ? formatRate(r) : "";
+    if (!media || destroyed) return;
+    if (r === 1) {
+      dropStretch();
+      if (media.name !== "html5") return;
+      const av = speedSwitched ? firstUsable("avplay") : -1;
+      if (av >= 0) switchTo(av);
+      else if (media.setRate) media.setRate(1, false);
+      return;
+    }
+    if (!audioSupported()) {
+      speedUnavailable();
+      return;
+    }
+    if (media.name !== "html5" || !media.setRate) {
+      const i = firstUsable("html5");
+      if (i < 0) speedUnavailable();
+      else switchTo(i);
+      return;
+    }
+    media.setRate(r, true);
+    if (stretch) {
+      stretch.setRate(r);
+      return;
+    }
+    const m = media;
+    void loadAudioTrack().then((track) => {
+      if (destroyed || media !== m || stretch || wantedRate() === 1) return;
+      if (!track) {
+        speedUnavailable();
+        return;
+      }
+      stretch = new StretchedAudio(track, { time: () => m.currentTime(), running: () => m.running() }, speedUnavailable);
+      stretch.setRate(wantedRate());
+    });
+  }
+
+  function setSpeed(r: number): void {
+    settings.playbackRate = r;
+    saveSettings();
+    if (speedBroken && r !== 1) toast("Slower speeds aren't available for this programme");
+    rateBadge.textContent = wantedRate() !== 1 ? formatRate(wantedRate()) : "";
+    clearTimeout(speedTimer);
+    speedTimer = window.setTimeout(applySpeed, SPEED_DELAY_MS);
   }
 
   function applyLayout(): void {
@@ -345,6 +460,10 @@ export function createPlayer(kind: "program" | "channel", id: string, fallbackTi
     }
     timeCur.textContent = formatTime(t);
     playIcon.textContent = isPaused() ? "❚❚" : "▶";
+    const controls = inControls();
+    gearIcon.style.display = canOpenStrip() ? "" : "none";
+    gearIcon.classList.toggle("on", controls && ctrl === "gear");
+    playIcon.classList.toggle("on", controls && ctrl === "play");
 
     // Periodically remember where we are.
     if (kind === "program" && Date.now() - lastSave > 10000 && t > 0) {
@@ -398,8 +517,16 @@ export function createPlayer(kind: "program" | "channel", id: string, fallbackTi
     if (media) media.pause();
   }
 
+  function canOpenStrip(): boolean {
+    return !!media && !(pb && pb.isLive);
+  }
+
+  /** Paused: ◀ ▶ move between the ⚙ and ▶ buttons instead of seeking. */
+  function inControls(): boolean {
+    return isPaused() && canOpenStrip();
+  }
+
   function togglePlay(): void {
-    lastToggleAt = Date.now();
     if (isPaused()) playSafe();
     else pauseMedia();
   }
@@ -431,6 +558,15 @@ export function createPlayer(kind: "program" | "channel", id: string, fallbackTi
 
   function stripList(): StripItem[] {
     const items: StripItem[] = [
+      {
+        id: "speed",
+        label: "Speed",
+        value: () => (speedBroken ? "1× only" : formatRate(settings.playbackRate)),
+        change: (dir) => {
+          const i = SPEEDS.indexOf(settings.playbackRate);
+          setSpeed(SPEEDS[Math.max(0, Math.min(SPEEDS.length - 1, (i < 0 ? SPEEDS.length - 1 : i) + dir))]);
+        },
+      },
       {
         id: "mode",
         label: "Subtitles",
@@ -491,7 +627,7 @@ export function createPlayer(kind: "program" | "channel", id: string, fallbackTi
   }
 
   function openStrip(): void {
-    if (!media || (pb && pb.isLive) || stripOpen) return;
+    if (!canOpenStrip() || stripOpen) return;
     stripOpen = true;
     stripSel = 0;
     el.classList.add("strip-open");
@@ -558,38 +694,9 @@ export function createPlayer(kind: "program" | "channel", id: string, fallbackTi
     }
   }
 
-  /** OK: short press toggles play/pause, holding it opens the options strip. */
-  function okDown(e: KeyboardEvent): void {
-    if (!media || (pb && pb.isLive)) {
-      if (!e.repeat) togglePlay();
-      return;
-    }
-    if (keyUpWorks()) {
-      if (e.repeat || okTimer) return;
-      okTimer = window.setTimeout(() => {
-        okTimer = 0;
-        openStrip();
-      }, HOLD_MS);
-      return;
-    }
-    // No keyup events on this platform: toggle at once, and treat auto-repeat as "held".
-    if (!e.repeat) {
-      togglePlay();
-      return;
-    }
-    if (!stripOpen) {
-      // Undo the toggle made by the first press of this hold.
-      if (Date.now() - lastToggleAt < 1500) togglePlay();
-      openStrip();
-    }
-  }
-
-  function onKeyUp(key: Key): void {
-    if (key !== "enter" || !okTimer) return; // e.g. the OK release from the previous screen
-    clearTimeout(okTimer);
-    okTimer = 0;
-    togglePlay();
-    showOsd();
+  function setCtrl(c: "play" | "gear"): void {
+    ctrl = c;
+    update();
   }
 
   /* ---------------------------------------------------------------- keys */
@@ -599,7 +706,9 @@ export function createPlayer(kind: "program" | "channel", id: string, fallbackTi
     showOsd();
     switch (key) {
       case "enter":
-        okDown(e);
+        if (e.repeat) return true;
+        if (inControls() && ctrl === "gear") openStrip();
+        else togglePlay();
         return true;
       case "playpause":
         togglePlay();
@@ -611,10 +720,12 @@ export function createPlayer(kind: "program" | "channel", id: string, fallbackTi
         pauseMedia();
         return true;
       case "left":
-        seekTo(curTime() - 10);
+        if (inControls()) setCtrl("gear");
+        else seekTo(curTime() - 10);
         return true;
       case "right":
-        seekTo(curTime() + 10);
+        if (inControls()) setCtrl("play");
+        else seekTo(curTime() + 10);
         return true;
       case "rw":
         seekTo(curTime() - 30);
@@ -675,6 +786,7 @@ export function createPlayer(kind: "program" | "channel", id: string, fallbackTi
 
   const events: MediaEvents = {
     onPlaying() {
+      ctrl = "play";
       status.style.display = "none";
       setScreenSaver(false);
       showOsd();
@@ -706,6 +818,17 @@ export function createPlayer(kind: "program" | "channel", id: string, fallbackTi
       // Try the next backend/stream, keeping the position.
       const t = curTime();
       if (t > 0 && kind === "program") resumeAt = t;
+      if (speedSwitched) {
+        // <video> doesn't work for this programme: back to AVPlay at 1×.
+        speedBroken = true;
+        toast("Slower speeds aren't available for this programme", 4000);
+        const av = firstUsable("avplay");
+        if (av >= 0) {
+          speedSwitched = false;
+          startAt(av, true);
+          return;
+        }
+      }
       if (startNext()) return;
       showStatus(
         "The video could not be played" + (detail ? ` (${detail})` : "") +
@@ -715,6 +838,7 @@ export function createPlayer(kind: "program" | "channel", id: string, fallbackTi
   };
 
   function dropMedia(): void {
+    dropStretch();
     if (!media) return;
     media.destroy();
     if (media.el.parentNode) media.el.parentNode.removeChild(media.el);
@@ -731,11 +855,23 @@ export function createPlayer(kind: "program" | "channel", id: string, fallbackTi
     applyLayout();
     showSpinner();
     media.open(c.stream.url);
-    if (autoplay) media.play();
+    applySpeed();
+    if (autoplay && media) media.play();
   }
 
   /** Start the first candidate that hasn't been tried yet. */
   function startNext(): boolean {
+    if (wantedRate() !== 1 && audioSupported()) {
+      // Slowed playback needs <video>; go there directly instead of via AVPlay.
+      for (let i = 0; i < candidates.length; i++) {
+        if (!tried[i] && candidates[i].backend === "html5") {
+          speedSwitched = hasAvplay();
+          startAt(i, true);
+          return true;
+        }
+      }
+    }
+    speedSwitched = false;
     for (let i = 0; i < candidates.length; i++) {
       if (!tried[i]) {
         startAt(i, true);
@@ -795,13 +931,13 @@ export function createPlayer(kind: "program" | "channel", id: string, fallbackTi
   return {
     el,
     onKey,
-    onKeyUp,
     destroy() {
       destroyed = true;
       clearInterval(tick);
       clearTimeout(osdTimer);
       clearTimeout(stripTimer);
-      clearTimeout(okTimer);
+      clearTimeout(speedTimer);
+      dropStretch();
       if (translator) translator.stop();
       if (media) {
         const t = media.currentTime();

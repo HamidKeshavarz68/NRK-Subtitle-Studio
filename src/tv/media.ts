@@ -5,6 +5,10 @@
  * AES-128 HLS. Samsung's AVPlay handles both natively, so it is used whenever
  * `webapis.avplay` exists. Everywhere else (desktop preview) a plain HTML5
  * <video> element is used with the HLS stream.
+ *
+ * Slowed playback always uses <video>: AVPlay only knows whole-number speeds,
+ * and both mute their own sound at any rate but 1, so the element is muted and
+ * the player supplies the sound itself (see audio/stretch.ts).
  */
 
 import { h } from "./dom";
@@ -32,6 +36,10 @@ export interface MediaBackend {
   /** Seekable window in seconds, or null when unknown. */
   seekable(): [number, number] | null;
   seek(t: number): void;
+  /** True while the picture is moving (not paused, seeking or buffering). */
+  running(): boolean;
+  /** HTML5 only: playback rate, optionally with the element's own sound muted. */
+  setRate?(rate: number, muted: boolean): void;
   /** Keep the video plane aligned with `el` after layout changes. */
   relayout(): void;
   destroy(): void;
@@ -46,14 +54,30 @@ export function hasAvplay(): boolean {
 export function createHtml5Backend(ev: MediaEvents): MediaBackend {
   const video = h("video", { class: "video", preload: "auto" }) as HTMLVideoElement;
   let dead = false;
+  let waiting = false;
+  let rate = 1;
 
-  video.addEventListener("playing", () => ev.onPlaying());
+  // Loading a source resets playbackRate, and some TVs reset it on play.
+  const applyRate = (): void => {
+    if (video.playbackRate !== rate) video.playbackRate = rate;
+  };
+  video.addEventListener("playing", () => {
+    waiting = false;
+    applyRate();
+    ev.onPlaying();
+  });
   video.addEventListener("pause", () => ev.onPause());
-  video.addEventListener("waiting", () => ev.onWaiting());
+  video.addEventListener("waiting", () => {
+    waiting = true;
+    ev.onWaiting();
+  });
   video.addEventListener("seeked", () => {
     if (!video.paused) ev.onPlaying();
   });
-  video.addEventListener("loadedmetadata", () => ev.onReady());
+  video.addEventListener("loadedmetadata", () => {
+    applyRate();
+    ev.onReady();
+  });
   video.addEventListener("ended", () => ev.onEnded());
   video.addEventListener("error", () => {
     if (dead || !video.getAttribute("src")) return;
@@ -93,6 +117,19 @@ export function createHtml5Backend(ev: MediaEvents): MediaBackend {
     },
     seek(t) {
       video.currentTime = t;
+    },
+    running() {
+      return !video.paused && !video.seeking && !waiting && video.readyState >= 3;
+    },
+    setRate(r, muted) {
+      rate = r;
+      video.muted = muted;
+      try {
+        video.defaultPlaybackRate = r;
+      } catch {
+        // ignore
+      }
+      applyRate();
     },
     relayout() {
       // CSS handles it.
@@ -261,6 +298,9 @@ export function createAvplayBackend(ev: MediaEvents): MediaBackend {
     },
     seekable() {
       return durationMs > 0 ? [0, durationMs / 1000] : null;
+    },
+    running() {
+      return !pausedFlag && state() === "PLAYING";
     },
     seek(t) {
       if (!ready) pendingSeek = t;

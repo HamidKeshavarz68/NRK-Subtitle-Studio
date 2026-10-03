@@ -8,7 +8,7 @@ import type { Key } from "../keys";
 import { resetNetworkMode, testConnection } from "../net";
 import { getChannels, search, type Card } from "../nrk";
 import {
-  cycle, DISPLAY_MODES, FONT_SIZES, LAYOUTS, saveSettings, settings,
+  cycle, DISPLAY_MODES, FONT_SIZES, formatRate, LAYOUTS, saveSettings, settings, SPEEDS,
 } from "../settings";
 import { frontpageView, type Adjustable } from "./frontpage";
 import { createDetails } from "./details";
@@ -329,6 +329,12 @@ function settingsView(): HTMLElement {
       () => settings.fontSize,
       (v) => (settings.fontSize = v)
     ),
+    choiceRow(
+      "Playback speed",
+      SPEEDS.map((n) => ({ code: n, name: n === 1 ? "Normal (1×)" : formatRate(n) })),
+      () => settings.playbackRate,
+      (v) => (settings.playbackRate = v)
+    ),
     h(
       "div",
       { class: "setting setting-text" },
@@ -357,7 +363,7 @@ function settingsView(): HTMLElement {
       h("p", { text: `NRK Subtitle Studio for Samsung TV · v${__APP_VERSION__}` }),
       h("p", {
         text:
-          "During playback: OK play/pause · hold OK for subtitle options · " +
+          "During playback: OK play/pause · paused: ◀ ⚙ then OK for speed and subtitle options · " +
           "◀ ▶ seek 10 s · ▲ ▼ previous/next line. More tips under Guide.",
       }),
       h("p", { text: "Not affiliated with NRK. Translations by DeepL (with your API key) or Google Translate." })

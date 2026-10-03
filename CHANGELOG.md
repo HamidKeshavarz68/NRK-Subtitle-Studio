@@ -6,6 +6,26 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- **Playback speed in the Samsung TV app** (0.65×, 0.7×, 0.75×, 0.8×, 0.85×,
+  0.9×, 0.95×, 1×, 1.05×, 1.1×, 1.2×, 1.3×, 1.4×) with sound. Samsung TVs mute their own audio at any rate but 1×, so the
+  picture plays in a muted `<video>` while the app decodes NRK's DASH audio
+  track itself, time-stretches it with WSOLA (voices keep their pitch) and keeps
+  it in sync with the video clock through Web Audio. At 1× the player goes
+  back to AVPlay. Set it with **Speed** in the options strip or under
+  **Settings → Playback speed**; the player bar shows the speed when it isn't 1×.
+  If a programme's audio track can't be used, the player says so and stays at 1×.
+
+### Changed
+
+- TV player: the options strip now opens from a **⚙ icon** next to play/pause
+  instead of by holding OK, which could open it by accident on pause. While
+  paused, ◀ ▶ move between ⚙ and ▶; while playing they still seek.
+- DeepL is now used for Persian, Urdu, Hindi, Azerbaijani, Tagalog,
+  Vietnamese, Thai, Hebrew and Kurdish (Sorani and Kurmanji); these used to
+  fall back to Google Translate with "language not supported by DeepL".
+
 ## [0.7.0] - 2026-10-03
 
 ### Added
