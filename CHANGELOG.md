@@ -6,6 +6,29 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [0.7.1] - 2026-10-04
+
+### Added
+
+- **Android app** (`android/`): a Kotlin / Jetpack Compose / Media3 app for
+  phones and tablets that mirrors the TV app: NRK-style front page,
+  favourites, live TV, search, series and details pages, watch progress, the
+  rolling translated subtitle panel or bottom captions, the ⚙ options strip,
+  DeepL / Google translation, right-to-left languages and playback speed
+  0.65×–1.4× via ExoPlayer's pitch-preserving time-stretching. Tap the picture
+  to pause / play; the full-screen button turns the picture sideways and fills
+  the screen.
+
+- **Watch progress in the Samsung TV app.** Films and episodes show a blue
+  progress bar when partly watched and a "✓ Watched" badge when finished
+  (95 % watched, or less than a minute left of a longer programme). The details
+  page shows "23 min left" / "Watched", offers Continue or Watch again, and has
+  Mark as watched / not watched. Existing resume positions are migrated.
+- **Subtitle background opacity** (TV and Android), in Settings and in the
+  player's options strip: 0 %, 15 %, 30 %, 45 %, 60 %, 75 % (default), 80 %,
+  85 %, 90 % or 100 % for the box behind captions drawn over the picture. At 30 % or less
+  the text gets an outline so it stays readable.
+
 ### Added
 
 - **Playback speed in the Samsung TV app** (0.65×, 0.7×, 0.75×, 0.8×, 0.85×,

@@ -24,6 +24,7 @@ panel that:
 - [Toolbar controls](#toolbar-controls)
 - [Scripts](#scripts)
 - [Samsung TV app (Tizen)](#samsung-tv-app-tizen)
+- [Android app](#android-app)
 - [Releasing to the Chrome Web Store](#releasing-to-the-chrome-web-store)
 - [How it works](#how-it-works)
 - [File layout](#file-layout)
@@ -137,11 +138,16 @@ room. It doesn't wrap tv.nrk.no; it talks to NRK's public API directly:
 - read the subtitles in a **side panel** (2 past + 8 upcoming lines) or as a
   **bottom caption**, in Norwegian, translated, or bilingual,
 - step line by line, repeat a line, and resume where you left off,
+- see what you have **watched or started**: a progress bar and a "✓ Watched"
+  badge on films and episodes, Continue / Watch again and Mark as watched on
+  the details page,
 - **change the playback speed** (0.65×–1.4×) with natural-sounding voices that
   stay in sync with the picture,
 - change speed, subtitle mode, layout and text size (24–84 px) while watching
   from a slim options strip (pause, then **◀ ⚙ OK**) that keeps the subtitles readable,
 - read Persian, Arabic, Urdu, Sorani and Hebrew translations right to left,
+- choose how see-through the box behind bottom captions is (**Subtitle
+  background opacity** 0–100 %, in Settings and the options strip),
 - read tips and tricks under **? Guide** in the menu.
 
 Programmes are played with Samsung's AVPlay (NRK serves DASH to TVs and
@@ -161,7 +167,7 @@ preserved) and schedules it against the video clock (`src/tv/audio/`). Back at
 | --- | --- | --- |
 | ◀ ▲ ▼ ▶ | Move focus | ◀ ▶ seek ±10 s (while paused: move between ⚙ and ▶) · ▲ ▼ previous / next subtitle line |
 | OK | Open | Play / pause |
-| OK on ⚙ (paused) | — | Options strip along the bottom edge (speed, subtitles, layout, text size, repeat line, start over); ◀ ▶ choose, ▲ ▼ or OK change, Back closes |
+| OK on ⚙ (paused) | — | Options strip along the bottom edge (speed, subtitles, layout, text size, background opacity, repeat line, start over); ◀ ▶ choose, ▲ ▼ or OK change, Back closes |
 | ▶❚❚ | — | Play / pause |
 | ⏪ ⏩ | — | Seek ±30 s |
 | Back | Back (press twice on the home screen to exit) | Close the options strip, or leave the player (Stop works too) |
@@ -231,6 +237,44 @@ npm run serve:tv   # → http://localhost:8787/ (1920×1080, keyboard: arrows, E
   API (the only host it forwards POSTs and the `Authorization` header to).
 - Live channels have no subtitle file, so the panel is hidden on live TV.
 - The app keeps your settings and resume positions in the TV's local storage.
+
+## Android app
+
+`android/` contains a native Android app for phones and tablets (Kotlin,
+Jetpack Compose, Media3 ExoPlayer) that mirrors the TV app:
+
+- **Front page** like the NRK app (swipeable hero, rows, banners), **Favourites**,
+  **Live TV**, **Search**, **Guide** and **Settings**: a bottom bar on phones, a
+  side rail on tablets,
+- series pages with seasons and episodes, details pages with Watch / Continue /
+  Watch again, **Mark as watched**, favourites and All episodes,
+- **watch progress**: a blue bar on started films and episodes, "✓ Watched" on
+  finished ones, and resume where you stopped,
+- the player: **tap the picture to pause / play**; the bar has ⚙,
+  play / pause, a seek bar and a **full-screen button** (turns the picture
+  sideways and fills the screen, subtitles as captions). The subtitle list sits beside the picture
+  (landscape) or below it (portrait), follows playback, and tapping a line
+  jumps to it. Bottom captions are available too, with adjustable background
+  opacity,
+- ⚙ opens the options strip: Speed, Subtitles, Layout, Text size, Background
+  opacity, Repeat line and Start over,
+- **playback speed** 0.65×–1.4× with ExoPlayer's built-in time-stretching
+  (pitch preserved, in sync); no workarounds needed on Android,
+- translation with DeepL (optional API key) or Google Translate, right-to-left
+  display for Persian, Arabic, Urdu, Kurdish (Sorani) and Hebrew.
+
+### Build and run
+
+Requires JDK 17+ (21 recommended) and the Android SDK (`ANDROID_HOME` or
+`android/local.properties` with `sdk.dir=…`).
+
+```bash
+cd android
+./gradlew testDebugUnitTest assembleDebug   # unit tests + app/build/outputs/apk/debug/app-debug.apk
+./gradlew installDebug                      # install on a connected phone or running emulator
+```
+
+Or open `android/` in Android Studio and press Run. minSdk is 26 (Android 8).
 
 ## Releasing to the Chrome Web Store
 
@@ -382,6 +426,10 @@ NRK-Subtitle-Studio/
 │   └── pack-*.mjs             Chrome package builders
 ├── public/
 │   └── icons/                 Toolbar and web-store icons
+├── android/                   Android app (Kotlin, Compose, Media3)
+│   └── app/src/main/java/app/nrksubtitlestudio/
+│       ├── data/              NRK client, WebVTT, translation, settings/favourites/progress
+│       └── ui/                Home tabs, series/details pages, player, settings and guide
 └── src/
     ├── background/
     │   └── index.ts           Service worker and external API proxy
@@ -427,6 +475,7 @@ NRK-Subtitle-Studio/
         ├── audio/             Slowed-playback sound: DASH/AAC demux, WSOLA, Web Audio sync
         ├── translate.ts       Background subtitle translation (DeepL → Google fallback)
         ├── favorites.ts       Favourite series and films (localStorage)
+        ├── progress.ts        Watch progress (resume, progress bars, Watched badges)
         ├── screens/           Home (favourites, live, search, settings), frontpage,
         │                      series, details (Watch / Favourite), guide, player
         ├── static/            config.xml and index.html

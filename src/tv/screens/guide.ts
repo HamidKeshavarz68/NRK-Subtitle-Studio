@@ -34,6 +34,15 @@ const SECTIONS: Section[] = [
     ],
   },
   {
+    title: "Watched and in progress",
+    tips: [
+      "A blue bar under a picture shows how much of that film or episode you have seen.",
+      "“✓ Watched” marks the ones you have finished (reaching the end credits counts).",
+      "On a details page, ▶ Continue picks up where you stopped and ↺ Watch again starts from the beginning.",
+      "Use ✓ Mark as watched (or Mark as not watched) on the details page to change it yourself.",
+    ],
+  },
+  {
     title: "During playback",
     tips: [
       "OK pauses and resumes. Only a small bar at the bottom edge appears, so the subtitles stay readable.",
@@ -47,7 +56,7 @@ const SECTIONS: Section[] = [
     title: "Options strip (⚙)",
     tips: [
       "Pause with OK, press ◀ to move to the ⚙ icon in the player bar, then press OK. A slim strip opens along the bottom edge.",
-      "◀ ▶ choose an option, ▲ ▼ (or OK) change it: Speed, Subtitles, Layout and Text size. Changes are saved right away.",
+      "◀ ▶ choose an option, ▲ ▼ (or OK) change it: Speed, Subtitles, Layout, Text size and Background opacity. Changes are saved right away.",
       "↺ Repeat line replays the current line and starts playing. Great for listening practice. ⏮ Start over plays from the beginning.",
       "Press Back to close the strip. It also closes by itself after a few seconds. Then press ▶ and OK (or Play) to continue.",
     ],
@@ -70,6 +79,7 @@ const SECTIONS: Section[] = [
       "Subtitles: Bilingual shows Norwegian with the translation underneath. You can also show only the original or only the translation.",
       "Layout: Side panel shows a scrolling list of lines next to a smaller picture. Bottom shows classic captions. Hidden turns them off.",
       "Text size goes from 24 to 84 px. With big text the side panel scrolls so the current line stays in view.",
+      "Subtitle background opacity (in Settings or the options strip) sets how dark the box behind bottom captions is: 0 % shows outlined text only, 100 % a solid box.",
       "You can change all of these with the options strip during playback, or in Settings.",
       "Right-to-left languages such as Persian, Arabic, Urdu and Kurdish (Sorani) are shown right to left.",
       "Live channels don't have subtitle files, so no subtitles are shown there.",

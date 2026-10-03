@@ -6,6 +6,7 @@
 
 import { onActivate } from "../app";
 import { clear, errorBox, h, lazyBg, spinner } from "../dom";
+import { decorate } from "../progress";
 import { focus, onFocusChange } from "../focus";
 import { getFrontpage, type Card, type Section } from "../nrk";
 
@@ -181,6 +182,7 @@ function rowEl(sec: Section, open: (c: Card, play?: boolean) => void): HTMLEleme
 function tileEl(card: Card, open: (c: Card, play?: boolean) => void, portrait: boolean, rank: number): HTMLElement {
   const img = h("div", { class: "fp-img" }, card.kind === "channel" ? h("div", { class: "badge live", text: "LIVE" }) : null);
   lazyBg(img, card.image);
+  if (card.kind === "program") decorate(img, card.id);
   const sub = [card.meta, card.subtitle].filter(Boolean).join(" · ");
   const el = h(
     "div",

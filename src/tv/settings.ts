@@ -19,9 +19,18 @@ export interface TvSettings {
   deeplApiKey: string;
   /** Playback speed for on-demand programmes (1 = normal). */
   playbackRate: number;
+  /** Opacity (%) of the box behind captions drawn over the picture. */
+  subtitleBg: number;
 }
 
 export const FONT_SIZES = [24, 28, 32, 36, 42, 48, 56, 64, 72, 84];
+export const SUBTITLE_BGS = [0, 15, 30, 45, 60, 75, 80, 85, 90, 100];
+
+/** "50 %" */
+export function formatBg(pct: number): string {
+  return pct + " %";
+}
+
 export const SPEEDS = [0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 1, 1.05, 1.1, 1.2, 1.3, 1.4];
 
 /** "0.9×" */
@@ -56,6 +65,7 @@ const DEFAULTS: TvSettings = {
   proxyUrl: "",
   deeplApiKey: "",
   playbackRate: 1,
+  subtitleBg: 75,
 };
 
 function load(): TvSettings {
@@ -72,6 +82,9 @@ function load(): TvSettings {
       }
       if (typeof parsed.proxyUrl === "string") out.proxyUrl = parsed.proxyUrl;
       if (typeof parsed.deeplApiKey === "string") out.deeplApiKey = parsed.deeplApiKey;
+      if (typeof parsed.subtitleBg === "number" && SUBTITLE_BGS.indexOf(parsed.subtitleBg) !== -1) {
+        out.subtitleBg = parsed.subtitleBg;
+      }
       if (typeof parsed.playbackRate === "number" && SPEEDS.indexOf(parsed.playbackRate) !== -1) {
         out.playbackRate = parsed.playbackRate;
       }

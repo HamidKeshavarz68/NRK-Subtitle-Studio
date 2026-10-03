@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Screen -->
+    <path
+        android:fillColor="#1F2638"
+        android:pathData="M30,34h48a4,4 0,0 1,4 4v32a4,4 0,0 1,-4 4h-48a4,4 0,0 1,-4 -4v-32a4,4 0,0 1,4 -4z" />
+    <!-- Play -->
+    <path
+        android:fillColor="#4F8CFF"
+        android:pathData="M48,41l14,8.5l-14,8.5z" />
+    <!-- Subtitle lines -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M36,62h36a2,2 0,0 1,0 4h-36a2,2 0,0 1,0 -4z" />
+    <path
+        android:fillColor="#FFD479"
+        android:pathData="M42,68h24a1.5,1.5 0,0 1,0 3h-24a1.5,1.5 0,0 1,0 -3z" />
+</vector>
