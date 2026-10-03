@@ -165,6 +165,16 @@ h2 { font-size: 32px; font-weight: 600; margin: 0 0 18px; color: #d5d8e3; }
   font-size: 20px; font-weight: 700;
 }
 .badge.live { background: #e3262f; color: #fff; }
+.badge.seen { left: auto; right: 14px; background: rgba(11,13,20,0.85); color: #fff; }
+.card-img { position: relative; }
+.pbar {
+  position: absolute; left: 0; right: 0; bottom: 0;
+  height: 10px; background: rgba(0,0,0,0.6);
+}
+.pbar-fill { height: 100%; background: #4f8cff; }
+.fp-img .pbar { border-radius: 0 0 12px 12px; overflow: hidden; }
+.details-progress { font-size: 26px; color: #d5d8e3; margin: -8px 0 20px; }
+.details-progress .pbar { position: relative; display: inline-block; vertical-align: middle; width: 240px; margin-left: 16px; border-radius: 4px; overflow: hidden; }
 
 .grid { white-space: normal; margin-right: 60px; }
 .grid .card { margin-bottom: 32px; }
@@ -504,11 +514,14 @@ html.avplay, html.avplay body, html.avplay .player, html.avplay .stage, html.avp
   display: inline-block;
   max-width: 1500px;
   padding: 12px 28px;
-  background: rgba(0,0,0,0.72);
+  background: rgba(0,0,0,0.75);
+  background: var(--sub-bg, rgba(0,0,0,0.75));
   border-radius: 10px;
   white-space: pre-line;
 }
 .cap-trans { color: #ffd479; }
+/* Little or no background: an outline keeps captions readable on bright pictures. */
+.sub-bg-low .cap-box { text-shadow: 0 0 4px #000, 0 0 8px #000, 0 2px 3px #000; }
 .cap-orig:empty, .cap-trans:empty { display: none; }
 
 .osd { opacity: 0; transition: opacity 0.25s; pointer-events: none; }

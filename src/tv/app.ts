@@ -4,6 +4,7 @@ import { h, lazyBg } from "./dom";
 import { focus, focusFirst, focused, move } from "./focus";
 import { exitApp, IME_CANCEL, IME_DONE, toKey, type Key } from "./keys";
 import type { Card } from "./nrk";
+import { decorate, paintProgress } from "./progress";
 
 export interface Screen {
   el: HTMLElement;
@@ -67,6 +68,7 @@ export function pop(): void {
   if (prev.lastFocus && prev.el.contains(prev.lastFocus)) focus(prev.lastFocus);
   else focusFirst(prev.el);
   if (prev.onResume) prev.onResume();
+  paintProgress(prev.el);
 }
 
 export function toast(text: string, ms = 2200): void {
@@ -80,6 +82,7 @@ export function toast(text: string, ms = 2200): void {
 export function cardEl(card: Card, onOpen: (c: Card) => void, wide = true): HTMLElement {
   const img = h("div", { class: "card-img" });
   lazyBg(img, card.image);
+  if (card.kind === "program") decorate(img, card.id);
   const el = h(
     "div",
     { class: "card focusable" + (wide ? "" : " card-small") },

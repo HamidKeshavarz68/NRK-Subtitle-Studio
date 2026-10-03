@@ -1,13 +1,15 @@
 /**
  * Details for a film or an episode, shown before playback (like the NRK app):
- * Watch, Favourite and, for episodes, a shortcut to all episodes of the series.
- * Favouriting an episode saves its series.
+ * Watch (or Continue / Watch again), Mark as watched, Favourite and, for
+ * episodes, a shortcut to all episodes of the series. Favouriting an episode
+ * saves its series.
  */
 
 import { onActivate, push, toast, type Screen } from "../app";
-import { errorBox, h, lazyBg } from "../dom";
+import { clear, errorBox, h, lazyBg } from "../dom";
 import { addFavorite, isFavorite, removeFavorite, type Favorite } from "../favorites";
 import { getProgramInfo, getSeries, type Card } from "../nrk";
+import { clearProgress, getProgress, markWatched, progressLabel } from "../progress";
 import { createPlayer } from "./player";
 import { createSeries } from "./series";
 
@@ -19,12 +21,40 @@ export function createDetails(card: Card): Screen {
   const sub = h("div", { class: "details-sub" });
   const desc = h("p", { class: "series-desc", text: card.subtitle || "" });
   const note = h("div", { class: "details-note" });
+  const progress = h("div", { class: "details-progress" });
 
   let target: Favorite | null = null;
 
   const watch = onActivate(h("div", { class: "button details-btn focusable", text: "▶  Watch" }), () =>
     push(createPlayer("program", card.id, title.textContent || card.title))
   );
+  const seenBtn = onActivate(h("div", { class: "button details-btn focusable" }), () => {
+    const p = getProgress(card.id);
+    if (p && p.done) {
+      clearProgress(card.id);
+      toast("Marked as not watched");
+    } else {
+      markWatched(card.id);
+      toast("Marked as watched");
+    }
+    renderProgress();
+  });
+
+  function renderProgress(): void {
+    const p = getProgress(card.id);
+    watch.textContent = !p ? "▶  Watch" : p.done ? "↺  Watch again" : "▶  Continue";
+    seenBtn.textContent = p && p.done ? "○  Mark as not watched" : "✓  Mark as watched";
+    clear(progress);
+    const label = progressLabel(p);
+    if (!label) return;
+    progress.appendChild(h("span", { text: label }));
+    if (p && !p.done && p.d > 0) {
+      const fill = h("div", { class: "pbar-fill" });
+      fill.style.width = Math.min(100, (p.t / p.d) * 100).toFixed(1) + "%";
+      progress.appendChild(h("div", { class: "pbar" }, fill));
+    }
+  }
+  renderProgress();
   const fav = h("div", { class: "button details-btn fav-btn focusable" });
   const seriesBtn = h("div", { class: "button details-btn focusable", text: "☰  All episodes" });
   fav.style.display = "none";
@@ -57,9 +87,10 @@ export function createDetails(card: Card): Screen {
     kicker,
     title,
     meta,
+    progress,
     sub,
     desc,
-    h("div", { class: "details-actions" }, watch, fav, seriesBtn),
+    h("div", { class: "details-actions" }, watch, seenBtn, fav, seriesBtn),
     note
   );
   const el = h("div", { class: "screen series details" }, backdrop, body);
@@ -107,5 +138,11 @@ export function createDetails(card: Card): Screen {
       note.appendChild(errorBox(err));
     });
 
-  return { el, onResume: renderFav };
+  return {
+    el,
+    onResume() {
+      renderFav();
+      renderProgress();
+    },
+  };
 }

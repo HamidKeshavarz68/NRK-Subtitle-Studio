@@ -7,8 +7,9 @@
  *   ◀ ▶               seek -/+10 s        ⏪ ⏩  seek -/+30 s
  *                     while paused: move between ⚙ and ▶ in the player bar;
  *                     OK on ⚙ opens the slim options strip along the bottom
- *                     edge (speed, subtitle mode, layout, text size, repeat
- *                     line, start over), Back closes it
+ *                     edge (speed, subtitle mode, layout, text size,
+ *                     background opacity, repeat line, start over), Back
+ *                     closes it
  *   ▲ ▼               previous / next subtitle line
  *   Back / Stop       leave the player
  *
@@ -35,15 +36,15 @@ import {
   dashTwin, getPlayback, loadCues, NotPlayableError, pickSubtitleTrack, type Playback, type Stream,
 } from "../nrk";
 import {
-  cycle, DISPLAY_MODES, FONT_SIZES, formatRate, isRtl, LAYOUTS, saveSettings, settings, SPEEDS,
+  cycle, DISPLAY_MODES, FONT_SIZES, formatBg, formatRate, isRtl, LAYOUTS, saveSettings, settings, SPEEDS, SUBTITLE_BGS,
   type DisplayMode, type SubtitleLayout,
 } from "../settings";
 import { CueTranslator } from "../translate";
+import { markWatched, recordProgress, resumePoint } from "../progress";
 
 const PAST = 2;
 const FUTURE = 8;
 const OSD_MS = 4000;
-const POS_KEY = "nss.tv.positions";
 /** The options strip closes itself after this much inactivity. */
 const STRIP_IDLE_MS = 8000;
 /** Speed changes settle for this long before the player acts (switching backends is slow). */
@@ -96,28 +97,6 @@ function setScreenSaver(on: boolean): void {
     ac.setScreenSaver(on ? (states ? states.SCREEN_SAVER_ON : 1) : (states ? states.SCREEN_SAVER_OFF : 0));
   } catch {
     // Not on a Samsung TV.
-  }
-}
-
-function loadPositions(): Record<string, number> {
-  try {
-    return JSON.parse(localStorage.getItem(POS_KEY) || "{}") as Record<string, number>;
-  } catch {
-    return {};
-  }
-}
-
-function savePosition(id: string, t: number, duration: number): void {
-  const all = loadPositions();
-  delete all[id];
-  if (t > 30 && (!isFinite(duration) || t < duration - 60)) all[id] = Math.floor(t);
-  const keys = Object.keys(all);
-  // Keep the 50 most recent entries (insertion order = recency).
-  for (let i = 0; i < keys.length - 50; i++) delete all[keys[i]];
-  try {
-    localStorage.setItem(POS_KEY, JSON.stringify(all));
-  } catch {
-    // ignore
   }
 }
 
@@ -255,6 +234,12 @@ export function createPlayer(kind: "program" | "channel", id: string, fallbackTi
     applyLayout();
   }
 
+  function setSubtitleBg(pct: number): void {
+    settings.subtitleBg = pct;
+    saveSettings();
+    applyLayout();
+  }
+
   /* ------------------------------------------------------------- speed */
 
   function wantedRate(): number {
@@ -357,6 +342,8 @@ export function createPlayer(kind: "program" | "channel", id: string, fallbackTi
     const layout = pb && pb.isLive ? "off" : settings.layout;
     el.className = "screen player layout-" + layout + (stripOpen ? " strip-open" : "");
     el.style.setProperty("--sub-size", settings.fontSize + "px");
+    el.style.setProperty("--sub-bg", "rgba(0,0,0," + settings.subtitleBg / 100 + ")");
+    el.classList.toggle("sub-bg-low", settings.subtitleBg <= 30);
     if (media) media.relayout();
     dirty = true;
   }
@@ -468,7 +455,7 @@ export function createPlayer(kind: "program" | "channel", id: string, fallbackTi
     // Periodically remember where we are.
     if (kind === "program" && Date.now() - lastSave > 10000 && t > 0) {
       lastSave = Date.now();
-      savePosition(id, t, dur);
+      recordProgress(id, t, dur);
     }
 
     const idx = cueIndexAt(cues, t);
@@ -589,6 +576,15 @@ export function createPlayer(kind: "program" | "channel", id: string, fallbackTi
         change: (dir) => {
           const i = FONT_SIZES.indexOf(settings.fontSize);
           setFontSize(FONT_SIZES[Math.max(0, Math.min(FONT_SIZES.length - 1, (i < 0 ? 0 : i) + dir))]);
+        },
+      },
+      {
+        id: "bg",
+        label: "Background opacity",
+        value: () => formatBg(settings.subtitleBg),
+        change: (dir) => {
+          const i = SUBTITLE_BGS.indexOf(settings.subtitleBg);
+          setSubtitleBg(SUBTITLE_BGS[Math.max(0, Math.min(SUBTITLE_BGS.length - 1, (i < 0 ? SUBTITLE_BGS.indexOf(75) : i) + dir))]);
         },
       },
     ];
@@ -809,6 +805,7 @@ export function createPlayer(kind: "program" | "channel", id: string, fallbackTi
       resumeNotice = false;
     },
     onEnded() {
+      if (kind === "program" && media) markWatched(id, media.duration());
       setScreenSaver(true);
       osd.classList.add("visible");
     },
@@ -893,8 +890,8 @@ export function createPlayer(kind: "program" | "channel", id: string, fallbackTi
       osdSub.textContent = p.subtitle;
       applyLayout();
       if (kind === "program") {
-        const saved = loadPositions()[id];
-        if (saved && saved > 30) {
+        const saved = resumePoint(id);
+        if (saved > 0) {
           resumeAt = saved;
           resumeNotice = true;
         }
@@ -941,7 +938,7 @@ export function createPlayer(kind: "program" | "channel", id: string, fallbackTi
       if (translator) translator.stop();
       if (media) {
         const t = media.currentTime();
-        if (kind === "program" && t > 0) savePosition(id, t, media.duration());
+        if (kind === "program" && t > 0) recordProgress(id, t, media.duration());
         media.destroy();
         media = null;
       }
