@@ -137,8 +137,8 @@ private fun Context.findActivity(): Activity? {
 }
 
 /** Height of the player bar; captions always sit just above it so they never move or hide. */
-private val BAR_H = 40.dp
-private val CAPTION_BOTTOM = 44.dp
+private val BAR_H = 36.dp
+private val CAPTION_BOTTOM = 38.dp
 
 /** Slim seek bar: tap or drag to scrub; `onScrubEnd` commits. */
 @Composable
@@ -573,7 +573,7 @@ fun PlayerScreen(kind: String, id: String, fallbackTitle: String, onBack: () -> 
 
     val ctrlButton: @Composable (String, String, () -> Unit) -> Unit = { label, tag, onClick ->
         Box(
-            Modifier.size(36.dp).clip(CircleShape).clickable(onClickLabel = tag, onClick = onClick),
+            Modifier.size(34.dp).clip(CircleShape).clickable(onClickLabel = tag, onClick = onClick),
             contentAlignment = Alignment.Center,
         ) { Text(label, fontSize = if (label.length > 2) 13.sp else 16.sp, color = Color.White, fontWeight = FontWeight.SemiBold) }
     }
@@ -613,7 +613,7 @@ fun PlayerScreen(kind: String, id: String, fallbackTitle: String, onBack: () -> 
             }
             if (rate != 1f) SmallBadge(formatRate(rate), Color(0xFF2B3550))
             Box(
-                Modifier.size(36.dp).clip(CircleShape)
+                Modifier.size(34.dp).clip(CircleShape)
                     .semantics { contentDescription = if (fullscreen) "Leave full screen" else "Full screen" }
                     .clickable {
                     fullscreen = !fullscreen
@@ -625,7 +625,7 @@ fun PlayerScreen(kind: String, id: String, fallbackTitle: String, onBack: () -> 
     }
 
     val stripItem: @Composable (String, String, (Int) -> Unit) -> Unit = { label, value, change ->
-        Row(Modifier.height(36.dp).clip(RoundedCornerShape(8.dp)).background(Colors.SurfaceHigh), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.height(32.dp).clip(RoundedCornerShape(8.dp)).background(Colors.SurfaceHigh), verticalAlignment = Alignment.CenterVertically) {
             Text("‹", Modifier.clickable { change(-1) }.padding(horizontal = 10.dp, vertical = 4.dp), fontSize = 18.sp)
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(label, fontSize = 9.sp, lineHeight = 10.sp, color = Colors.Muted)
@@ -637,15 +637,15 @@ fun PlayerScreen(kind: String, id: String, fallbackTitle: String, onBack: () -> 
     val stripAction: @Composable (String, () -> Unit) -> Unit = { label, onClick ->
         Text(
             label,
-            Modifier.height(36.dp).clip(RoundedCornerShape(8.dp)).background(Colors.SurfaceHigh).clickable(onClick = onClick)
-                .padding(horizontal = 12.dp, vertical = 9.dp),
+            Modifier.height(32.dp).clip(RoundedCornerShape(8.dp)).background(Colors.SurfaceHigh).clickable(onClick = onClick)
+                .padding(horizontal = 12.dp, vertical = 7.dp),
             fontSize = 12.sp,
         )
     }
 
     val optionsStrip: @Composable (Modifier) -> Unit = { m ->
         Row(
-            m.fillMaxWidth().height(BAR_H + 4.dp).background(Color(0xF00F121B)).horizontalScroll(rememberScrollState()).padding(horizontal = 6.dp, vertical = 4.dp),
+            m.fillMaxWidth().height(BAR_H + 2.dp).background(Color(0xF00F121B)).horizontalScroll(rememberScrollState()).padding(horizontal = 6.dp, vertical = 3.dp),
             horizontalArrangement = Arrangement.spacedBy(6.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
