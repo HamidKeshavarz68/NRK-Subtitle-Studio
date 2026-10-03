@@ -9,6 +9,13 @@
 
 import type { RuntimeRequest } from "../shared/extension/messages";
 import { runtime } from "../shared/extension/runtime";
+import {
+  deeplApiBase,
+  deeplHeaders,
+  deeplTargetLang,
+  deeplTranslateBody,
+  parseDeeplTranslations,
+} from "../shared/translation/deepl";
 
 function hasMessageType<T extends RuntimeRequest["type"]>(
   message: unknown,
@@ -58,52 +65,21 @@ function extractTranslatedText(data: unknown): string {
 // content script's existing split logic recovers them cleanly.
 const DEEPL_SEPARATOR = "\n\n@@@\n\n";
 
-/** Map our BCP-47 base codes to DeepL target languages; null = unsupported. */
-function deeplTargetLang(base: string): string | null {
-  const code = (base || "").toLowerCase().split("-")[0];
-  const map: Record<string, string> = {
-    en: "EN-US", pt: "PT-PT", zh: "ZH", nb: "NB", no: "NB",
-    ar: "AR", bg: "BG", cs: "CS", da: "DA", de: "DE", el: "EL",
-    es: "ES", et: "ET", fi: "FI", fr: "FR", hu: "HU", id: "ID",
-    it: "IT", ja: "JA", ko: "KO", lt: "LT", lv: "LV", nl: "NL",
-    pl: "PL", ro: "RO", ru: "RU", sk: "SK", sl: "SL", sv: "SV",
-    tr: "TR", uk: "UK",
-  };
-  return map[code] ?? null;
-}
-
-/** Free-tier keys end in ":fx" and use a separate host from Pro keys. */
-function deeplEndpoint(key: string): string {
-  const host = key.trim().endsWith(":fx") ? "api-free.deepl.com" : "api.deepl.com";
-  return `https://${host}/v2/translate`;
-}
-
 async function deeplTranslate(text: string, target: string, apiKey: string): Promise<string> {
   const key = apiKey.trim();
   if (!key) throw new Error("missing DeepL API key");
   const tl = deeplTargetLang(target);
   if (!tl) throw new Error("unsupported DeepL target language: " + target);
 
-  const pieces = text.split(/\s*@@@\s*/g);
-  const body = new URLSearchParams();
-  body.set("target_lang", tl);
-  for (const piece of pieces) body.append("text", piece);
-
-  const res = await fetch(deeplEndpoint(key), {
+  const res = await fetch(deeplApiBase(key) + "/translate", {
     method: "POST",
-    headers: {
-      "Authorization": "DeepL-Auth-Key " + key,
-      "Content-Type": "application/x-www-form-urlencoded",
-    },
-    body: body.toString(),
+    headers: deeplHeaders(key),
+    body: deeplTranslateBody(text.split(/\s*@@@\s*/g), tl),
     credentials: "omit",
   });
   if (!res.ok) throw new Error("HTTP " + res.status);
 
-  const data: unknown = await res.json();
-  const translations = (data as { translations?: Array<{ text?: unknown }> })?.translations;
-  if (!Array.isArray(translations)) throw new Error("bad DeepL response");
-  return translations.map((t) => String(t?.text ?? "")).join(DEEPL_SEPARATOR);
+  return parseDeeplTranslations(await res.json()).join(DEEPL_SEPARATOR);
 }
 
 runtime.onMessage.addListener((msg: unknown, _sender: unknown, sendResponse) => {

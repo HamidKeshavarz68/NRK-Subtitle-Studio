@@ -141,8 +141,19 @@ function revealInScrollers(el: HTMLElement): void {
       if (isY) {
         if (r.top < box.top + pad) node.scrollTop -= box.top + pad - r.top;
         else if (r.bottom > box.bottom - pad) node.scrollTop += r.bottom - (box.bottom - pad);
+        // Text below the last focusable item (status lines, notes) can't get focus, so show it now.
+        if (isLastFocusable(node, el)) node.scrollTop = node.scrollHeight;
       }
     }
     node = node.parentElement;
   }
+}
+
+function isLastFocusable(scroller: HTMLElement, el: HTMLElement): boolean {
+  const all = scroller.querySelectorAll(".focusable");
+  for (let i = all.length - 1; i >= 0; i--) {
+    const f = all[i] as HTMLElement;
+    if (f.offsetParent !== null) return f === el;
+  }
+  return false;
 }

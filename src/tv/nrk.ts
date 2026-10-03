@@ -17,9 +17,17 @@ export interface Card {
   subtitle?: string;
   image?: string;
   meta?: string;
+  /** Front page extras: wide backdrop, title logo and promo tagline. */
+  backdrop?: string;
+  logo?: string;
+  tagline?: string;
 }
 
-export interface Row {
+/** How a front page section is drawn, mapped from NRK's `displayContract`. */
+export type SectionKind = "hero" | "landscape" | "portrait" | "banner";
+
+export interface Section {
+  kind: SectionKind;
   title: string;
   cards: Card[];
 }
@@ -112,45 +120,84 @@ function plugToCard(plug: Json): Card | null {
   const subtitle = asStr(dcc.description);
   const type = asStr(plug.targetType);
 
-  if (type === "series" || type === "podcast") {
+  let card: Card | null = null;
+  if (type === "series") {
     const id = asStr(get(plug, "series.seriesId"));
-    return id && type === "series" ? { kind: "series", id, title, subtitle, image } : null;
-  }
-  if (type === "episode" || type === "standaloneProgram" || type === "program") {
-    const id =
-      asStr(get(plug, "episode.programId")) ||
-      asStr(get(plug, "standaloneProgram.programId")) ||
-      asStr(get(plug, "program.programId"));
-    return id ? { kind: "program", id, title, subtitle, image } : null;
-  }
-  if (type === "channel") {
+    if (id) card = { kind: "series", id, title, subtitle, image };
+  } else if (type === "episode" || type === "standaloneProgram" || type === "program") {
+    const prog = get(plug, type);
+    const id = asStr(get(prog, "programId"));
+    if (id) card = { kind: "program", id, title, subtitle, image, meta: formatDuration(asStr(get(prog, "duration"))) };
+  } else if (type === "channel") {
     const id = asStr(get(plug, "channel.channelId"));
-    return id ? { kind: "channel", id, title, subtitle, image } : null;
+    if (id) card = { kind: "channel", id, title, subtitle, image };
   }
-  return null;
+  if (!card) return null;
+  const backdrop =
+    pickImage(get(dcc, "backdropImage.webImages"), 1600) || pickImage(get(dcc, "cinematicImage.webImages"), 1600);
+  const logo = pickImage(dcc.logoImage, 600);
+  const tagline = asStr(dcc.tagline).trim();
+  if (backdrop) card.backdrop = backdrop;
+  if (logo) card.logo = logo;
+  if (tagline) card.tagline = tagline;
+  return card;
 }
 
-/** The tv.nrk.no front page as rows of cards. */
-export async function getFrontpage(): Promise<Row[]> {
+/** ISO 8601 duration ("PT1H19M29S") → "1 t 19 min" / "31 min". */
+function formatDuration(iso: string): string | undefined {
+  const m = /^PT(?:(\d+)H)?(?:(\d+)M)?(?:([\d.]+)S)?$/.exec(iso);
+  if (!m) return undefined;
+  const hours = Number(m[1] || 0);
+  const mins = Number(m[2] || 0) + (Number(m[3] || 0) >= 30 ? 1 : 0);
+  if (!hours && !mins) return undefined;
+  return hours ? `${hours} t${mins ? ` ${mins} min` : ""}` : `${mins} min`;
+}
+
+/**
+ * Row titles meant for logged-in users ("Logg deg på for …") lose that clause;
+ * when nothing is left, the row's own "Se mer for barn" link names it instead.
+ */
+function sectionTitle(raw: string, plugs: unknown[]): string {
+  const cleaned = raw.replace(/\s*\blogg (deg )?på(?![a-zæøå])[^.?!]*[.?!]?/gi, "").trim();
+  if (cleaned) return cleaned;
+  for (const p of plugs) {
+    if (asStr(get(p, "targetType")) !== "page") continue;
+    const s = asStr(get(p, "displayContractContent.contentTitle"))
+      .trim()
+      .replace(/^se (mer|flere)\s+/i, "");
+    if (s) return s.charAt(0).toUpperCase() + s.slice(1);
+  }
+  return "";
+}
+
+function sectionKind(contract: string, first: boolean): SectionKind {
+  if (contract === "multiHero" && first) return "hero";
+  if (contract === "inlineHero") return "banner";
+  if (/^portrait/i.test(contract)) return "portrait";
+  return "landscape";
+}
+
+/** The tv.nrk.no front page as typed sections (hero carousel, rows and banners). */
+export async function getFrontpage(): Promise<Section[]> {
   const page = await fetchJson(`${PSAPI}/tv/pages/frontpage`);
-  const rows: Row[] = [];
+  const sections: Section[] = [];
   for (const section of asArr(get(page, "sections"))) {
     const included = get(section, "included");
     if (!isObj(included)) continue;
-    const cards = asArr(included.plugs)
-      .map((p) => (isObj(p) ? plugToCard(p) : null))
-      .filter((c): c is Card => !!c);
+    const plugs = asArr(included.plugs);
+    const cards = plugs.map((p) => (isObj(p) ? plugToCard(p) : null)).filter((c): c is Card => !!c);
     if (!cards.length) continue;
-    const title = asStr(included.title).trim() || (cards.length === 1 ? cards[0].title : "Utvalgt");
-    // Merge consecutive single-item "hero" sections into one row.
-    const prev = rows[rows.length - 1];
-    if (cards.length === 1 && prev && prev.title === "Utvalgt") {
-      prev.cards.push(cards[0]);
+    const hasHero = sections.some((s) => s.kind === "hero");
+    let kind = sectionKind(asStr(included.displayContract), !hasHero);
+    if (kind === "banner" && !(cards[0].backdrop || cards[0].image)) kind = "landscape";
+    const title = sectionTitle(asStr(included.title), plugs) || (kind === "banner" ? "" : "Utvalgt");
+    if (kind === "banner") {
+      for (const c of cards) sections.push({ kind, title, cards: [c] });
     } else {
-      rows.push({ title: cards.length === 1 ? "Utvalgt" : title, cards });
+      sections.push({ kind, title, cards });
     }
   }
-  return rows;
+  return sections;
 }
 
 /** Live channels (NRK1, NRK2, NRK3, Super, …). */
@@ -216,6 +263,41 @@ export async function getSeries(id: string): Promise<SeriesInfo> {
     image: pickImage(get(body, "image")),
     backdrop: pickImage(get(body, "backdropImage"), 1280) || pickImage(get(body, "image"), 1280),
     seasons,
+  };
+}
+
+export interface ProgramInfo {
+  id: string;
+  title: string;
+  /** Short line such as "I dag · Vil stoppe koranskoler" (may equal the description). */
+  subtitle: string;
+  description: string;
+  image?: string;
+  /** Set when the programme is an episode of a series. */
+  seriesId?: string;
+  meta: string;
+  playable: boolean;
+  message: string;
+}
+
+/** Details for a film or episode, from the playback metadata. */
+export async function getProgramInfo(id: string): Promise<ProgramInfo> {
+  const m = await fetchJson(`${PSAPI}/playback/metadata/program/${encodeURIComponent(id)}`);
+  const seriesHref = asStr(get(m, "_links.series.href"));
+  const seriesId = seriesHref ? decodeURIComponent(seriesHref.split("/").filter(Boolean).pop() || "") : "";
+  const meta = [formatDuration(asStr(get(m, "duration"))), asStr(get(m, "legalAge.body.rating.displayAge"))]
+    .filter(Boolean)
+    .join(" · ");
+  return {
+    id,
+    title: asStr(get(m, "preplay.titles.title")),
+    subtitle: asStr(get(m, "preplay.titles.subtitle")),
+    description: asStr(get(m, "preplay.description")),
+    image: pickImage(get(m, "preplay.poster.images"), 1280),
+    seriesId: seriesId || undefined,
+    meta,
+    playable: asStr(get(m, "playability")) === "playable",
+    message: asStr(get(m, "nonPlayable.endUserMessage")),
   };
 }
 

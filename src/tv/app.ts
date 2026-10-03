@@ -9,6 +9,8 @@ export interface Screen {
   el: HTMLElement;
   /** Return true if the key was handled. Arrow keys fall back to spatial navigation. */
   onKey?(key: Key, e: KeyboardEvent): boolean;
+  /** Key released (used to tell a short OK press from a held one). */
+  onKeyUp?(key: Key, e: KeyboardEvent): void;
   /** Called when the screen becomes visible again after the screen above it was popped. */
   onResume?(): void;
   destroy?(): void;
@@ -33,6 +35,12 @@ let root: HTMLElement;
 let toastEl: HTMLElement;
 let toastTimer = 0;
 let backArmedAt = 0;
+let keyUpSeen = false;
+
+/** True once the platform has delivered a keyup event (so press-and-hold can be detected). */
+export function keyUpWorks(): boolean {
+  return keyUpSeen;
+}
 
 export function top(): Screen | undefined {
   return stack[stack.length - 1];
@@ -154,5 +162,11 @@ export function startApp(container: HTMLElement, first: Screen): void {
   toastEl = h("div", { class: "toast" });
   document.body.appendChild(toastEl);
   document.addEventListener("keydown", onKeyDown);
+  document.addEventListener("keyup", (e) => {
+    keyUpSeen = true;
+    const key = toKey(e);
+    const screen = top();
+    if (key && screen && screen.onKeyUp) screen.onKeyUp(key, e);
+  });
   push(first);
 }
