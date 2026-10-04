@@ -38,6 +38,8 @@ import app.nrksubtitlestudio.data.FONT_SIZES
 import app.nrksubtitlestudio.data.LANGS
 import app.nrksubtitlestudio.data.LAYOUTS
 import app.nrksubtitlestudio.data.SPEEDS
+import app.nrksubtitlestudio.data.AUTO_PAUSE_OPTIONS
+import app.nrksubtitlestudio.data.formatAutoPause
 import app.nrksubtitlestudio.data.SUBTITLE_BGS
 import app.nrksubtitlestudio.data.formatBg
 import app.nrksubtitlestudio.data.Store
@@ -62,6 +64,9 @@ fun SettingsScreen(onOpenGuide: (() -> Unit)?) {
         ChoiceRow("Subtitle size", FONT_SIZES.map { it to "$it sp" }, s.fontSize) { v -> Store.updateSettings { it.copy(fontSize = v) } }
         ChoiceRow("Subtitle background opacity", SUBTITLE_BGS.map { it to formatBg(it) }, s.subtitleBg) { v ->
             Store.updateSettings { it.copy(subtitleBg = v) }
+        }
+        ChoiceRow("Auto pause", AUTO_PAUSE_OPTIONS.map { it to formatAutoPause(it) }, s.autoPause) { v ->
+            Store.updateSettings { it.copy(autoPause = v) }
         }
         ChoiceRow("Playback speed", SPEEDS.map { it to if (it == 1f) "Normal (1×)" else formatRate(it) }, s.playbackRate) { v ->
             Store.updateSettings { it.copy(playbackRate = v) }
@@ -129,12 +134,17 @@ private val GUIDE: List<Pair<String, List<String>>> = listOf(
         "Drag the bar to jump to any point.",
         "Tap a line in the subtitle list to jump to it. Great for listening to a sentence again.",
         "Turn the phone sideways for a bigger picture with the subtitle list beside it.",
-        "Tap the corners icon at the right of the player bar for full screen: the picture turns sideways and fills the screen, with subtitles as captions over it. Tap it again or press Back to return.",
+        "Tap the corners icon at the right of the player bar for full screen: the picture fills the screen, with subtitles as captions over it. Phones turn sideways; on a tablet, hold it the way you like. Tap the icon again or press Back to return.",
     ),
-    "Options strip (⚙)" to listOf(
-        "Tap ⚙ in the player bar to open a slim strip along the bottom: Speed, Subtitles, Layout, Text size and Background opacity, each with ‹ › to change it.",
+    "Options panel (⚙)" to listOf(
+        "Tap ⚙ in the player bar to open the Options panel: Speed, Auto pause, Subtitles, Layout, Text size and Background opacity, each with ‹ › to change it.",
         "↺ Repeat line replays the current line. ⏮ Start over plays from the beginning.",
-        "Tap ✕ (or the picture) to close the strip. Changes are saved right away.",
+        "Tap ✕ or anywhere outside the panel to close it. Changes are saved right away.",
+    ),
+    "Auto pause" to listOf(
+        "Turn on Auto pause (Settings or the ⚙ Options panel) to stop at the end of every subtitle line, so you have time to read it.",
+        "“After each line” waits for you: tap the picture to play the next line. Or choose to resume by itself after 2, 3 or 5 seconds.",
+        "Tap a line in the subtitle list (or ↺ Repeat line) to hear it again; it pauses after it again.",
     ),
     "Playback speed" to listOf(
         "Slow programmes down (0.95× to 0.65×) or speed them up (1.05× to 1.4×) with Speed in the options strip or under Settings → Playback speed.",

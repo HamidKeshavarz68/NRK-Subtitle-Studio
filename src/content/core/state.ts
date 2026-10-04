@@ -16,6 +16,7 @@ import {
   ViewMode,
 } from "./config";
 import { clamp, readStorage, writeStorage } from "./utils";
+import { AUTO_PAUSE_OFF, isAutoPauseSetting, type AutoPauseSetting } from "../../shared/subtitles/autopause";
 
 export interface AppState {
   video: HTMLVideoElement | null;
@@ -40,6 +41,13 @@ export interface Settings {
   playbackRate: number;
   translator: TranslatorProvider;
   deeplApiKey: string;
+  /** 0 = off, -1 = pause after each line until play, n = resume after n seconds. */
+  autoPause: AutoPauseSetting;
+}
+
+function readAutoPause(): AutoPauseSetting {
+  const v = parseInt(readStorage(STORAGE_KEYS.autoPause) || "", 10);
+  return isAutoPauseSetting(v) ? v : AUTO_PAUSE_OFF;
 }
 
 function readTranslator(): TranslatorProvider {
@@ -54,7 +62,13 @@ export const settings: Settings = {
   playbackRate: clampSpeed(parseFloat(readStorage(STORAGE_KEYS.playbackRate) || "") || SPEED.default),
   translator: readTranslator(),
   deeplApiKey: readStorage(STORAGE_KEYS.deeplApiKey) || "",
+  autoPause: readAutoPause(),
 };
+
+export function setAutoPause(value: AutoPauseSetting): void {
+  settings.autoPause = isAutoPauseSetting(value) ? value : AUTO_PAUSE_OFF;
+  writeStorage(STORAGE_KEYS.autoPause, String(settings.autoPause));
+}
 
 export function setTranslator(provider: TranslatorProvider): void {
   settings.translator = provider;

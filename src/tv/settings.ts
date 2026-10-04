@@ -1,6 +1,9 @@
 /** Persisted user settings for the TV app (stored in localStorage). */
 
 import type { DisplayMode } from "../content/core/config";
+import { AUTO_PAUSE_OFF, isAutoPauseSetting, type AutoPauseSetting } from "../shared/subtitles/autopause";
+
+export { AUTO_PAUSE_OPTIONS } from "../shared/subtitles/autopause";
 
 export type { DisplayMode } from "../content/core/config";
 
@@ -21,6 +24,22 @@ export interface TvSettings {
   playbackRate: number;
   /** Opacity (%) of the box behind captions drawn over the picture. */
   subtitleBg: number;
+  /** 0 = off, -1 = pause after each line until OK, n = resume after n seconds. */
+  autoPause: AutoPauseSetting;
+}
+
+/** Long label for Settings. */
+export function formatAutoPause(v: AutoPauseSetting): string {
+  if (v === 0) return "Off";
+  if (v < 0) return "After each line (OK to continue)";
+  return "After each line, resume after " + v + " s";
+}
+
+/** Short label for the player's options strip. */
+export function formatAutoPauseShort(v: AutoPauseSetting): string {
+  if (v === 0) return "Off";
+  if (v < 0) return "Each line";
+  return "Each line · " + v + " s";
 }
 
 export const FONT_SIZES = [24, 28, 32, 36, 42, 48, 56, 64, 72, 84];
@@ -66,6 +85,7 @@ const DEFAULTS: TvSettings = {
   deeplApiKey: "",
   playbackRate: 1,
   subtitleBg: 75,
+  autoPause: AUTO_PAUSE_OFF,
 };
 
 function load(): TvSettings {
@@ -82,6 +102,7 @@ function load(): TvSettings {
       }
       if (typeof parsed.proxyUrl === "string") out.proxyUrl = parsed.proxyUrl;
       if (typeof parsed.deeplApiKey === "string") out.deeplApiKey = parsed.deeplApiKey;
+      if (isAutoPauseSetting(parsed.autoPause)) out.autoPause = parsed.autoPause;
       if (typeof parsed.subtitleBg === "number" && SUBTITLE_BGS.indexOf(parsed.subtitleBg) !== -1) {
         out.subtitleBg = parsed.subtitleBg;
       }

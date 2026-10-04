@@ -20,6 +20,7 @@ import {
   setDisplayMode,
   setViewMode,
   setFontSize,
+  setAutoPause,
   setPlaybackRate,
   setTargetLang,
   setTranslator,
@@ -88,6 +89,13 @@ const speedSel = overlay.querySelector('select[data-act="speed"]') as HTMLSelect
 speedSel.value = String(settings.playbackRate);
 speedSel.addEventListener("change", () => {
   setPlaybackRate(parseFloat(speedSel.value) || 1);
+});
+
+// ---------- Auto pause ----------
+const autoPauseSel = overlay.querySelector('select[data-act="auto-pause"]') as HTMLSelectElement;
+autoPauseSel.value = String(settings.autoPause);
+autoPauseSel.addEventListener("change", () => {
+  setAutoPause(parseInt(autoPauseSel.value, 10) || 0);
 });
 
 initializeOverlayWindow(
@@ -286,6 +294,11 @@ function applyI18n(): void {
   setOptionText(viewSel, "rolling", t("view_rolling"));
   setOptionText(viewSel, "single", t("view_single"));
   speedSel.title = t("playback_speed");
+  autoPauseSel.title = t("setting_auto_pause");
+  Array.from(autoPauseSel.options).forEach((o) => {
+    const v = parseInt(o.value, 10);
+    o.text = v === 0 ? t("auto_pause_off") : v < 0 ? t("auto_pause_wait") : t("auto_pause_resume").replace("{n}", String(v));
+  });
   deeplKeyInput.placeholder = t("deepl_key_placeholder");
 
   setTitle('button[data-act="font-down"]', t("font_smaller"));

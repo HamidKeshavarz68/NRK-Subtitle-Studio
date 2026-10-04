@@ -73,6 +73,16 @@ overlay.innerHTML = `
       </select>
     </label>
     <label class="nsr-settings-row">
+      <span data-i18n="setting_auto_pause">Auto pause</span>
+      <select class="nsr-sel" data-act="auto-pause" title="Auto pause">
+        <option value="0">Off</option>
+        <option value="-1">After each line</option>
+        <option value="2">After each line, resume after 2 s</option>
+        <option value="3">After each line, resume after 3 s</option>
+        <option value="5">After each line, resume after 5 s</option>
+      </select>
+    </label>
+    <label class="nsr-settings-row">
       <span data-i18n="setting_display_mode">Display mode</span>
       <select class="nsr-sel" data-act="mode" title="Display mode">
         <option value="original">Original</option>

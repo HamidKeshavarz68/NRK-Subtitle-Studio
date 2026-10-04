@@ -23,6 +23,7 @@
 
 import { pop, toast, type Screen } from "../app";
 import { parseDashAudio, type DashAudioTrack } from "../audio/dash";
+import { AutoPauseDetector } from "../../shared/subtitles/autopause";
 import { audioSupported, StretchedAudio } from "../audio/stretch";
 import { LANGS } from "../../content/core/config";
 import type { SubtitleCue } from "../../shared/subtitles/vtt";
@@ -36,7 +37,8 @@ import {
   dashTwin, getPlayback, loadCues, NotPlayableError, pickSubtitleTrack, type Playback, type Stream,
 } from "../nrk";
 import {
-  cycle, DISPLAY_MODES, FONT_SIZES, formatBg, formatRate, isRtl, LAYOUTS, saveSettings, settings, SPEEDS, SUBTITLE_BGS,
+  AUTO_PAUSE_OPTIONS, cycle, DISPLAY_MODES, FONT_SIZES, formatAutoPauseShort, formatBg, formatRate, isRtl, LAYOUTS,
+  saveSettings, settings, SPEEDS, SUBTITLE_BGS,
   type DisplayMode, type SubtitleLayout,
 } from "../settings";
 import { CueTranslator } from "../translate";
@@ -184,6 +186,12 @@ export function createPlayer(kind: "program" | "channel", id: string, fallbackTi
   /** <video> was started only for slowed playback (AVPlay is used at 1×). */
   let speedSwitched = false;
   let speedTimer = 0;
+  /** Auto pause: pauses at the end of each subtitle line (see shared/subtitles/autopause.ts). */
+  const autoPauser = new AutoPauseDetector();
+  /** True while paused by auto pause (not by the user). */
+  let autoPaused = false;
+  let autoResumeTimer = 0;
+  const autoPausePoll = window.setInterval(autoPauseTick, 50);
 
   const tick = window.setInterval(update, 200);
 
@@ -481,7 +489,32 @@ export function createPlayer(kind: "program" | "channel", id: string, fallbackTi
     }, OSD_MS);
   }
 
+  function cancelAutoResume(): void {
+    autoPaused = false;
+    clearTimeout(autoResumeTimer);
+    autoResumeTimer = 0;
+  }
+
+  function autoPauseTick(): void {
+    if (settings.autoPause === 0 || !media || !cues.length || (pb && pb.isLive) || !media.running()) return;
+    if (autoPauser.check(cues, media.currentTime()) < 0) return;
+    pauseMedia();
+    autoPaused = true;
+    clearTimeout(autoResumeTimer);
+    if (settings.autoPause > 0) {
+      autoResumeTimer = window.setTimeout(() => {
+        autoResumeTimer = 0;
+        if (autoPaused && isPaused() && settings.autoPause > 0) {
+          autoPaused = false;
+          playSafe();
+        }
+      }, settings.autoPause * 1000);
+    }
+  }
+
   function seekTo(t: number): void {
+    autoPauser.reset();
+    cancelAutoResume();
     if (!media) return;
     const d = media.duration();
     let max = isFinite(d) ? d - 0.5 : Infinity;
@@ -514,6 +547,7 @@ export function createPlayer(kind: "program" | "channel", id: string, fallbackTi
   }
 
   function togglePlay(): void {
+    cancelAutoResume();
     if (isPaused()) playSafe();
     else pauseMedia();
   }
@@ -552,6 +586,18 @@ export function createPlayer(kind: "program" | "channel", id: string, fallbackTi
         change: (dir) => {
           const i = SPEEDS.indexOf(settings.playbackRate);
           setSpeed(SPEEDS[Math.max(0, Math.min(SPEEDS.length - 1, (i < 0 ? SPEEDS.length - 1 : i) + dir))]);
+        },
+      },
+      {
+        id: "autopause",
+        label: "Auto pause",
+        value: () => formatAutoPauseShort(settings.autoPause),
+        change: (dir) => {
+          const i = AUTO_PAUSE_OPTIONS.indexOf(settings.autoPause);
+          settings.autoPause = AUTO_PAUSE_OPTIONS[Math.max(0, Math.min(AUTO_PAUSE_OPTIONS.length - 1, (i < 0 ? 0 : i) + dir))];
+          saveSettings();
+          autoPauser.reset();
+          if (settings.autoPause === 0) cancelAutoResume();
         },
       },
       {
@@ -783,6 +829,8 @@ export function createPlayer(kind: "program" | "channel", id: string, fallbackTi
   const events: MediaEvents = {
     onPlaying() {
       ctrl = "play";
+      // Played by the user (or by the auto-resume timer itself): no pending auto-resume any more.
+      if (!isPaused()) cancelAutoResume();
       status.style.display = "none";
       setScreenSaver(false);
       showOsd();
@@ -934,6 +982,8 @@ export function createPlayer(kind: "program" | "channel", id: string, fallbackTi
       clearTimeout(osdTimer);
       clearTimeout(stripTimer);
       clearTimeout(speedTimer);
+      clearInterval(autoPausePoll);
+      cancelAutoResume();
       dropStretch();
       if (translator) translator.stop();
       if (media) {
