@@ -145,6 +145,41 @@ class NrkTest {
     }
 }
 
+class AutoPauseTest {
+    private val cues = listOf(
+        app.nrksubtitlestudio.data.Cue(1.0, 3.0, "a"),
+        app.nrksubtitlestudio.data.Cue(3.0, 5.0, "b"),
+        app.nrksubtitlestudio.data.Cue(8.0, 10.0, "c"),
+    )
+
+    private fun run(d: app.nrksubtitlestudio.data.AutoPauseDetector, from: Double, to: Double, step: Double = 0.05): List<Double> {
+        val fired = ArrayList<Double>()
+        var t = from
+        while (t <= to + 1e-9) {
+            val r = Math.round(t * 1000) / 1000.0
+            if (d.check(cues, r) >= 0) fired.add(Math.round(r * 100) / 100.0)
+            t += step
+        }
+        return fired
+    }
+
+    @Test fun firesOncePerLineBeforeEnd() {
+        assertEquals(listOf(2.95, 4.95, 9.95), run(app.nrksubtitlestudio.data.AutoPauseDetector(), 0.0, 12.0))
+    }
+
+    @Test fun noDoubleFireAfterResumeButAgainAfterSeek() {
+        val d = app.nrksubtitlestudio.data.AutoPauseDetector()
+        assertEquals(listOf(2.95), run(d, 0.0, 2.95))
+        assertEquals(emptyList<Double>(), run(d, 2.95, 2.99))
+        d.reset()
+        assertEquals(listOf(2.95), run(d, 1.2, 3.0))
+    }
+
+    @Test fun coarseTicksStillFire() {
+        assertEquals(listOf(3.0, 5.0), run(app.nrksubtitlestudio.data.AutoPauseDetector(), 0.0, 6.0, 0.5))
+    }
+}
+
 class FormatTest {
     @Test fun rates() {
         assertEquals("0.9×", formatRate(0.9f))

@@ -16,7 +16,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.interaction.DragInteraction
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -32,6 +32,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -104,6 +105,9 @@ import app.nrksubtitlestudio.data.NotPlayableException
 import app.nrksubtitlestudio.data.Nrk
 import app.nrksubtitlestudio.data.Playback
 import app.nrksubtitlestudio.data.SPEEDS
+import app.nrksubtitlestudio.data.AUTO_PAUSE_OPTIONS
+import app.nrksubtitlestudio.data.AutoPauseDetector
+import app.nrksubtitlestudio.data.formatAutoPauseShort
 import app.nrksubtitlestudio.data.SUBTITLE_BGS
 import app.nrksubtitlestudio.data.formatBg
 import app.nrksubtitlestudio.data.Store
@@ -111,7 +115,9 @@ import app.nrksubtitlestudio.data.Vtt
 import app.nrksubtitlestudio.data.formatRate
 import app.nrksubtitlestudio.data.isRtl
 import app.nrksubtitlestudio.data.langName
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlin.coroutines.cancellation.CancellationException
 
 private val SHORT_MODE = mapOf("bilingual" to "Bilingual", "original" to "Original", "translated" to "Translation")
@@ -213,7 +219,7 @@ private fun <T> step(list: List<T>, current: T, dir: Int, wrap: Boolean): T {
  * Full-screen player with the rolling, translated subtitle panel.
  *
  * Tap the picture to pause / play. The bar along the bottom has ⚙ (options
- * strip: speed, subtitles, layout, text size, background opacity, repeat
+ * panel: speed, subtitles, layout, text size, background opacity, repeat
  * line, start over),
  * play / pause and a seek bar. Speeds other than 1× use ExoPlayer's own
  * time-stretching, so voices keep their pitch.
@@ -254,6 +260,10 @@ fun PlayerScreen(kind: String, id: String, fallbackTitle: String, onBack: () -> 
     var dragFrac by remember { mutableFloatStateOf(0f) }
     /** Landscape, picture fills the screen, subtitles as captions over it. */
     var fullscreen by remember { mutableStateOf(false) }
+    val autoPauser = remember { AutoPauseDetector() }
+    /** True while paused by auto pause (not by the user). */
+    var autoPaused by remember { mutableStateOf(false) }
+    var autoResumeJob by remember { mutableStateOf<Job?>(null) }
     val isLive = pb?.isLive == true
 
     fun start(p: Playback, i: Int, atMs: Long) {
@@ -335,9 +345,13 @@ fun PlayerScreen(kind: String, id: String, fallbackTitle: String, onBack: () -> 
             activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
         }
     }
-    LaunchedEffect(fullscreen) {
+    // Phones turn sideways for full screen. Tablets and other large screens don't: Android
+    // letterboxes or ignores orientation requests there, so full screen just fills the
+    // screen the way the tablet is held.
+    val largeScreen = LocalConfiguration.current.smallestScreenWidthDp >= 600
+    LaunchedEffect(fullscreen, largeScreen) {
         activity?.requestedOrientation =
-            if (fullscreen) ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE else ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+            if (fullscreen && !largeScreen) ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE else ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
     }
     val view: View = LocalView.current
     DisposableEffect(playing) {
@@ -433,7 +447,14 @@ fun PlayerScreen(kind: String, id: String, fallbackTitle: String, onBack: () -> 
     LaunchedEffect(idx, translator) { if (idx >= 0) translator?.focusOn(idx) }
     val rtl = isRtl(settings.targetLang)
 
+    fun cancelAutoResume() {
+        autoPaused = false
+        autoResumeJob?.cancel()
+        autoResumeJob = null
+    }
+
     fun togglePlay() {
+        cancelAutoResume()
         if (ended) {
             player.seekTo(0)
             player.play()
@@ -447,9 +468,36 @@ fun PlayerScreen(kind: String, id: String, fallbackTitle: String, onBack: () -> 
     }
 
     fun seekTo(ms: Long) {
+        autoPauser.reset()
+        cancelAutoResume()
         val max = if (durationMs > 0) durationMs - 500 else Long.MAX_VALUE
         player.seekTo(ms.coerceIn(0, max))
         poke++
+    }
+
+    // Auto pause: stop at the end of each subtitle line (and maybe resume after n seconds).
+    LaunchedEffect(player, cues, isLive) {
+        autoPauser.reset()
+        while (true) {
+            delay(50)
+            val mode = Store.settings.value.autoPause
+            if (mode == 0 || isLive || cues.isEmpty() || !player.isPlaying) continue
+            if (autoPauser.check(cues, player.currentPosition / 1000.0) < 0) continue
+            player.pause()
+            controls = true
+            poke++
+            autoResumeJob?.cancel()
+            autoPaused = true
+            if (mode > 0) {
+                autoResumeJob = launch {
+                    delay(mode * 1000L)
+                    if (autoPaused && !player.playWhenReady) {
+                        autoPaused = false
+                        player.play()
+                    }
+                }
+            }
+        }
     }
 
     fun repeatLine() {
@@ -624,57 +672,79 @@ fun PlayerScreen(kind: String, id: String, fallbackTitle: String, onBack: () -> 
         }
     }
 
-    val stripItem: @Composable (String, String, (Int) -> Unit) -> Unit = { label, value, change ->
-        Row(Modifier.height(32.dp).clip(RoundedCornerShape(8.dp)).background(Colors.SurfaceHigh), verticalAlignment = Alignment.CenterVertically) {
-            Text("‹", Modifier.clickable { change(-1) }.padding(horizontal = 10.dp, vertical = 4.dp), fontSize = 18.sp)
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(label, fontSize = 9.sp, lineHeight = 10.sp, color = Colors.Muted)
-                Text(value, fontSize = 12.sp, lineHeight = 14.sp, fontWeight = FontWeight.SemiBold)
-            }
-            Text("›", Modifier.clickable { change(1) }.padding(horizontal = 10.dp, vertical = 4.dp), fontSize = 18.sp)
+    // Options panel (⚙): a vertical card over the player, one row per setting.
+    val optionRow: @Composable (String, String, (Int) -> Unit) -> Unit = { label, value, change ->
+        Row(Modifier.fillMaxWidth().height(48.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(label, Modifier.weight(1f), fontSize = 15.sp, color = Color(0xFFD5D8E3))
+            Box(
+                Modifier.size(44.dp).clip(CircleShape).clickable(onClickLabel = "Less") { change(-1) },
+                contentAlignment = Alignment.Center,
+            ) { Text("‹", fontSize = 24.sp) }
+            Text(value, Modifier.widthIn(min = 104.dp), fontSize = 15.sp, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center)
+            Box(
+                Modifier.size(44.dp).clip(CircleShape).clickable(onClickLabel = "More") { change(1) },
+                contentAlignment = Alignment.Center,
+            ) { Text("›", fontSize = 24.sp) }
         }
     }
-    val stripAction: @Composable (String, () -> Unit) -> Unit = { label, onClick ->
-        Text(
-            label,
-            Modifier.height(32.dp).clip(RoundedCornerShape(8.dp)).background(Colors.SurfaceHigh).clickable(onClick = onClick)
-                .padding(horizontal = 12.dp, vertical = 7.dp),
-            fontSize = 12.sp,
-        )
+    val panelAction: @Composable (String, Modifier, () -> Unit) -> Unit = { label, m, onClick ->
+        Box(
+            m.height(44.dp).clip(RoundedCornerShape(10.dp)).background(Colors.SurfaceHigh).clickable(onClick = onClick),
+            contentAlignment = Alignment.Center,
+        ) { Text(label, fontSize = 14.sp) }
     }
 
-    val optionsStrip: @Composable (Modifier) -> Unit = { m ->
-        Row(
-            m.fillMaxWidth().height(BAR_H + 2.dp).background(Color(0xF00F121B)).horizontalScroll(rememberScrollState()).padding(horizontal = 6.dp, vertical = 3.dp),
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
-            verticalAlignment = Alignment.CenterVertically,
+    val optionsPanel: @Composable (Modifier) -> Unit = { m ->
+        val maxH = (LocalConfiguration.current.screenHeightDp * 0.88f).dp
+        Column(
+            m.widthIn(max = 460.dp).fillMaxWidth().heightIn(max = maxH)
+                .clip(RoundedCornerShape(16.dp))
+                .background(Color(0xF7151A26))
+                // Taps inside the card must not reach the scrim behind it.
+                .pointerInput(Unit) { detectTapGestures { } }
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 16.dp, vertical = 10.dp),
         ) {
-            stripItem("Speed", formatRate(settings.playbackRate)) { d ->
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("Options", Modifier.weight(1f), fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                Box(
+                    Modifier.size(44.dp).clip(CircleShape).clickable(onClickLabel = "Close") { strip = false },
+                    contentAlignment = Alignment.Center,
+                ) { Text("✕", fontSize = 18.sp) }
+            }
+            optionRow("Speed", formatRate(settings.playbackRate)) { d ->
                 Store.updateSettings { it.copy(playbackRate = step(SPEEDS, it.playbackRate, d, wrap = false)) }
             }
-            stripItem("Subtitles", SHORT_MODE[settings.displayMode] ?: settings.displayMode) { d ->
+            optionRow("Auto pause", formatAutoPauseShort(settings.autoPause)) { d ->
+                Store.updateSettings { it.copy(autoPause = step(AUTO_PAUSE_OPTIONS, it.autoPause, d, wrap = false)) }
+                autoPauser.reset()
+                if (Store.settings.value.autoPause == 0) cancelAutoResume()
+            }
+            optionRow("Subtitles", SHORT_MODE[settings.displayMode] ?: settings.displayMode) { d ->
                 Store.updateSettings { it.copy(displayMode = step(DISPLAY_MODES.map { m -> m.first }, it.displayMode, d, wrap = true)) }
                 if (settings.targetLang == "off") Toast.makeText(context, "Choose a translation language in Settings", Toast.LENGTH_SHORT).show()
             }
-            stripItem("Layout", SHORT_LAYOUT[settings.layout] ?: settings.layout) { d ->
+            optionRow("Layout", SHORT_LAYOUT[settings.layout] ?: settings.layout) { d ->
                 Store.updateSettings { it.copy(layout = step(LAYOUTS.map { l -> l.first }, it.layout, d, wrap = true)) }
             }
-            stripItem("Text size", settings.fontSize.toString()) { d ->
+            optionRow("Text size", settings.fontSize.toString()) { d ->
                 Store.updateSettings { it.copy(fontSize = step(FONT_SIZES, it.fontSize, d, wrap = false)) }
             }
-            stripItem("Background opacity", formatBg(settings.subtitleBg)) { d ->
+            optionRow("Background opacity", formatBg(settings.subtitleBg)) { d ->
                 Store.updateSettings { it.copy(subtitleBg = step(SUBTITLE_BGS, it.subtitleBg, d, wrap = false)) }
             }
-            if (cues.isNotEmpty()) stripAction("↺ Repeat line") {
-                strip = false
-                repeatLine()
+            HorizontalDivider(Modifier.padding(vertical = 8.dp), color = Color(0xFF2A3247))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (cues.isNotEmpty()) panelAction("↺ Repeat line", Modifier.weight(1f)) {
+                    strip = false
+                    repeatLine()
+                }
+                panelAction("⏮ Start over", Modifier.weight(1f)) {
+                    strip = false
+                    seekTo(0)
+                    player.play()
+                }
             }
-            stripAction("⏮ Start over") {
-                strip = false
-                seekTo(0)
-                player.play()
-            }
-            stripAction("✕") { strip = false }
         }
     }
 
@@ -719,7 +789,6 @@ fun PlayerScreen(kind: String, id: String, fallbackTitle: String, onBack: () -> 
             AnimatedVisibility(controls && !strip, Modifier.align(Alignment.BottomCenter), enter = fadeIn(), exit = fadeOut()) {
                 controlBar(Modifier)
             }
-            if (strip) optionsStrip(Modifier.align(Alignment.BottomCenter))
             notice?.let {
                 Text(
                     it,
@@ -755,6 +824,11 @@ fun PlayerScreen(kind: String, id: String, fallbackTitle: String, onBack: () -> 
                 subtitlePanel(Modifier.weight(1f).fillMaxWidth())
             }
             else -> videoArea(Modifier.fillMaxSize(), layout == "bottom")
+        }
+        if (strip) {
+            // Scrim: tapping outside the panel closes it.
+            Box(Modifier.fillMaxSize().background(Color(0x73000000)).pointerInput(Unit) { detectTapGestures { strip = false } })
+            optionsPanel(Modifier.align(Alignment.Center).padding(12.dp))
         }
     }
 }

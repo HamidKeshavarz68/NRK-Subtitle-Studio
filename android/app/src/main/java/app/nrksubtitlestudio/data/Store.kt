@@ -18,6 +18,8 @@ data class Settings(
     val playbackRate: Float = 1f,
     /** Opacity (%) of the box behind captions drawn over the picture. */
     val subtitleBg: Int = 75,
+    /** 0 = off, -1 = pause after each line until play, n = resume after n seconds. */
+    val autoPause: Int = 0,
     /** Optional DeepL API key; empty = Google Translate. */
     val deeplKey: String = "",
 )
@@ -109,6 +111,7 @@ object Store {
         val rate = prefs.getFloat("playbackRate", 1f)
         val size = prefs.getInt("fontSize", d.fontSize)
         val bg = prefs.getInt("subtitleBg", d.subtitleBg)
+        val ap = prefs.getInt("autoPause", d.autoPause)
         return Settings(
             targetLang = prefs.getString("targetLang", d.targetLang) ?: d.targetLang,
             displayMode = prefs.getString("displayMode", d.displayMode)?.takeIf { v -> DISPLAY_MODES.any { it.first == v } } ?: d.displayMode,
@@ -116,6 +119,7 @@ object Store {
             fontSize = if (size in FONT_SIZES) size else d.fontSize,
             playbackRate = if (rate in SPEEDS) rate else 1f,
             subtitleBg = if (bg in SUBTITLE_BGS) bg else d.subtitleBg,
+            autoPause = if (ap in AUTO_PAUSE_OPTIONS) ap else d.autoPause,
             deeplKey = prefs.getString("deeplKey", "") ?: "",
         )
     }
@@ -130,6 +134,7 @@ object Store {
             .putInt("fontSize", s.fontSize)
             .putFloat("playbackRate", s.playbackRate)
             .putInt("subtitleBg", s.subtitleBg)
+            .putInt("autoPause", s.autoPause)
             .putString("deeplKey", s.deeplKey)
             .apply()
     }

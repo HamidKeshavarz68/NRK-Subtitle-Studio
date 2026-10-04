@@ -12,6 +12,7 @@ import { isSubtitleTrack } from "../core/utils";
 import { render, setStatus, updateStatus, invalidateRender } from "../ui/renderer";
 import { onTranslationConfigChanged, stopTranslations } from "../translation/translator";
 import { accumulateCues, hasSubtitles, resetAccumulatedCues } from "./download";
+import { attachAutoPause } from "./autopause";
 
 /** Tracks already subscribed for cue updates. */
 const hookedTracks = new WeakSet<TextTrack>();
@@ -88,6 +89,7 @@ export function attachToVideo(video: HTMLVideoElement): void {
   video.addEventListener("loadedmetadata", refresh);
   // Re-apply our chosen playback rate if the player resets it.
   video.addEventListener("ratechange", onRateChange);
+  const detachAutoPause = attachAutoPause(video);
 
   detach = () => {
     video.textTracks.removeEventListener("addtrack", refresh);
@@ -96,6 +98,7 @@ export function attachToVideo(video: HTMLVideoElement): void {
     video.removeEventListener("seeked", onSeeked);
     video.removeEventListener("loadedmetadata", refresh);
     video.removeEventListener("ratechange", onRateChange);
+    detachAutoPause();
   };
 
   applyPlaybackRate();

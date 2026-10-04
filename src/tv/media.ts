@@ -291,6 +291,15 @@ export function createAvplayBackend(ev: MediaEvents): MediaBackend {
       return pausedFlag;
     },
     currentTime() {
+      // oncurrentplaytime only fires a few times a second; ask for the exact time while playing.
+      if (ready && !pausedFlag && !dead) {
+        try {
+          const ms = av.getCurrentTime();
+          if (ms > 0) timeMs = ms;
+        } catch {
+          // keep the last reported time
+        }
+      }
       return timeMs / 1000;
     },
     duration() {

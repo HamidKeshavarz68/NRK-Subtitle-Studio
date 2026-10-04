@@ -6,6 +6,35 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [0.7.2] - 2026-10-04
+
+### Added
+
+- **Auto pause** in the Chrome extension, the Samsung TV app and the Android
+  app: playback stops at the end of every subtitle line so there is time to
+  read it. Choose **After each line** (continue with play / OK / a tap) or
+  **resume after 2, 3 or 5 seconds**, in Settings (and in the TV and Android
+  options strip). Jumping back to a line (click / tap a line, ▲, Repeat line)
+  replays it and pauses after it again. The line-end detection is shared
+  (`src/shared/subtitles/autopause.ts`, with a Kotlin port on Android) and
+  polls the play head every 50 ms, so it stops just before the next line
+  starts.
+
+### Changed
+
+- Android: the player's ⚙ options are now a larger, vertical **Options panel**
+  (one row per setting, tap outside to close) instead of a narrow strip that
+  scrolled sideways.
+
+### Fixed
+
+- Android: the full-screen button misbehaved on tablets, because Android
+  letterboxes or ignores orientation requests on large screens. Full screen now
+  only turns phones sideways; on tablets it fills the screen the way the tablet
+  is held.
+- Samsung TV: AVPlay's play position is read directly while playing (it was
+  only updated a few times a second), so line-based features react on time.
+
 ## [0.7.1] - 2026-10-04
 
 ### Added

@@ -56,9 +56,17 @@ const SECTIONS: Section[] = [
     title: "Options strip (⚙)",
     tips: [
       "Pause with OK, press ◀ to move to the ⚙ icon in the player bar, then press OK. A slim strip opens along the bottom edge.",
-      "◀ ▶ choose an option, ▲ ▼ (or OK) change it: Speed, Subtitles, Layout, Text size and Background opacity. Changes are saved right away.",
+      "◀ ▶ choose an option, ▲ ▼ (or OK) change it: Speed, Auto pause, Subtitles, Layout, Text size and Background opacity. Changes are saved right away.",
       "↺ Repeat line replays the current line and starts playing. Great for listening practice. ⏮ Start over plays from the beginning.",
       "Press Back to close the strip. It also closes by itself after a few seconds. Then press ▶ and OK (or Play) to continue.",
+    ],
+  },
+  {
+    title: "Auto pause",
+    tips: [
+      "Turn on Auto pause (Settings or the ⚙ options strip) to stop at the end of every subtitle line, so you have time to read it.",
+      "“After each line” waits for you: press OK to play the next line. Or choose to resume by itself after 2, 3 or 5 seconds.",
+      "Jumping back with ▲ replays a line and pauses after it again. Great for listening practice.",
     ],
   },
   {

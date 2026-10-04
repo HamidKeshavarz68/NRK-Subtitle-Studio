@@ -48,6 +48,7 @@ export const STORAGE_KEYS = {
   uiLang: "nsr.uiLang",
   translator: "nsr.translator",
   deeplApiKey: "nsr.deeplApiKey",
+  autoPause: "nsr.autoPause",
 } as const;
 
 export const FONT = { min: 6, max: 36, step: 2, default: 12 } as const;

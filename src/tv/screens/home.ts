@@ -8,7 +8,8 @@ import type { Key } from "../keys";
 import { resetNetworkMode, testConnection } from "../net";
 import { getChannels, search, type Card } from "../nrk";
 import {
-  cycle, DISPLAY_MODES, FONT_SIZES, formatBg, formatRate, LAYOUTS, saveSettings, settings, SPEEDS, SUBTITLE_BGS,
+  AUTO_PAUSE_OPTIONS, cycle, DISPLAY_MODES, FONT_SIZES, formatAutoPause, formatBg, formatRate, LAYOUTS, saveSettings,
+  settings, SPEEDS, SUBTITLE_BGS,
 } from "../settings";
 import { frontpageView, type Adjustable } from "./frontpage";
 import { createDetails } from "./details";
@@ -334,6 +335,12 @@ function settingsView(): HTMLElement {
       SUBTITLE_BGS.map((n) => ({ code: n, name: formatBg(n) })),
       () => settings.subtitleBg,
       (v) => (settings.subtitleBg = v)
+    ),
+    choiceRow(
+      "Auto pause",
+      AUTO_PAUSE_OPTIONS.map((n) => ({ code: n, name: formatAutoPause(n) })),
+      () => settings.autoPause,
+      (v) => (settings.autoPause = v)
     ),
     choiceRow(
       "Playback speed",

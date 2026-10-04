@@ -12,6 +12,8 @@ panel that:
   (Original / Translated / Bilingual modes),
 - lets you **click any line to seek** the video to that point,
 - adds a **playback-speed selector** (0.5× – 2×),
+- can **auto pause** at the end of every subtitle line so you have time to read
+  it, then wait for you or carry on after 2, 3 or 5 seconds,
 - adjusts **font size** (A− / A+),
 - can be **resized from any edge or corner** and dragged anywhere on screen,
 - hides NRK's native on-video subtitle while the panel is open, and restores it
@@ -87,7 +89,7 @@ Then:
 | **Mode** | `Original` / `Translated` / `Bilingual`. Bilingual shows the original above and a smaller, blue, italic translation below. Hidden when language is off. |
 | **0.5× – 2×** | Sets `video.playbackRate` and re-asserts it if the player tries to reset. |
 | **A− / A+** | Cue font size (10 px – 32 px, persisted). |
-| **⚙ Settings** | Opens a responsive menu for language, translator, playback speed, and text size. Typography, spacing, and controls scale automatically with viewport size and display density. |
+| **⚙ Settings** | Opens a responsive menu for language, translator, playback speed, auto pause, and text size. Typography, spacing, and controls scale automatically with viewport size and display density. |
 | **Hide / Show** | Collapses the window to just the toolbar, or restores its previous size. |
 
 The settings dropdown is localised with a small built-in i18n layer
@@ -141,6 +143,8 @@ room. It doesn't wrap tv.nrk.no; it talks to NRK's public API directly:
 - see what you have **watched or started**: a progress bar and a "✓ Watched"
   badge on films and episodes, Continue / Watch again and Mark as watched on
   the details page,
+- **auto pause** after every subtitle line (wait for OK, or resume after 2, 3
+  or 5 seconds), in Settings and the options strip,
 - **change the playback speed** (0.65×–1.4×) with natural-sounding voices that
   stay in sync with the picture,
 - change speed, subtitle mode, layout and text size (24–84 px) while watching
@@ -167,7 +171,7 @@ preserved) and schedules it against the video clock (`src/tv/audio/`). Back at
 | --- | --- | --- |
 | ◀ ▲ ▼ ▶ | Move focus | ◀ ▶ seek ±10 s (while paused: move between ⚙ and ▶) · ▲ ▼ previous / next subtitle line |
 | OK | Open | Play / pause |
-| OK on ⚙ (paused) | — | Options strip along the bottom edge (speed, subtitles, layout, text size, background opacity, repeat line, start over); ◀ ▶ choose, ▲ ▼ or OK change, Back closes |
+| OK on ⚙ (paused) | — | Options strip along the bottom edge (speed, auto pause, subtitles, layout, text size, background opacity, repeat line, start over); ◀ ▶ choose, ▲ ▼ or OK change, Back closes |
 | ▶❚❚ | — | Play / pause |
 | ⏪ ⏩ | — | Seek ±30 s |
 | Back | Back (press twice on the home screen to exit) | Close the options strip, or leave the player (Stop works too) |
@@ -251,13 +255,17 @@ Jetpack Compose, Media3 ExoPlayer) that mirrors the TV app:
 - **watch progress**: a blue bar on started films and episodes, "✓ Watched" on
   finished ones, and resume where you stopped,
 - the player: **tap the picture to pause / play**; the bar has ⚙,
-  play / pause, a seek bar and a **full-screen button** (turns the picture
-  sideways and fills the screen, subtitles as captions). The subtitle list sits beside the picture
+  play / pause, a seek bar and a **full-screen button** (the picture fills the
+  screen with subtitles as captions; phones turn sideways, tablets stay the way
+  they are held). The subtitle list sits beside the picture
   (landscape) or below it (portrait), follows playback, and tapping a line
   jumps to it. Bottom captions are available too, with adjustable background
   opacity,
-- ⚙ opens the options strip: Speed, Subtitles, Layout, Text size, Background
-  opacity, Repeat line and Start over,
+- ⚙ opens the **Options panel** (a vertical card over the player): Speed,
+  Auto pause, Subtitles, Layout, Text size, Background opacity, Repeat line and
+  Start over,
+- **auto pause** after every subtitle line: wait for a tap, or resume after 2,
+  3 or 5 seconds,
 - **playback speed** 0.65×–1.4× with ExoPlayer's built-in time-stretching
   (pitch preserved, in sync); no workarounds needed on Android,
 - translation with DeepL (optional API key) or Google Translate, right-to-left

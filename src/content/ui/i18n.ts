@@ -40,6 +40,10 @@ export type MessageKey =
   | "download_busy"
   | "download_title"
   | "setting_playback_speed"
+  | "setting_auto_pause"
+  | "auto_pause_off"
+  | "auto_pause_wait"
+  | "auto_pause_resume"
   | "setting_font_size"
   | "setting_ui_language"
   | "setting_translator"
@@ -86,6 +90,10 @@ const MESSAGES: Record<UiLang, Messages> = {
     download_busy: "Downloading…",
     download_title: "Download subtitles (.srt)",
     setting_playback_speed: "Playback speed",
+    setting_auto_pause: "Auto pause",
+    auto_pause_off: "Off",
+    auto_pause_wait: "After each line",
+    auto_pause_resume: "After each line, resume after {n} s",
     setting_font_size: "Text size",
     setting_ui_language: "Menu language",
     setting_translator: "Translator",
@@ -129,6 +137,10 @@ const MESSAGES: Record<UiLang, Messages> = {
     download_busy: "Laster ned…",
     download_title: "Last ned undertekster (.srt)",
     setting_playback_speed: "Avspillingshastighet",
+    setting_auto_pause: "Automatisk pause",
+    auto_pause_off: "Av",
+    auto_pause_wait: "Etter hver linje",
+    auto_pause_resume: "Etter hver linje, fortsett etter {n} s",
     setting_font_size: "Tekststørrelse",
     setting_ui_language: "Menyspråk",
     setting_translator: "Oversetter",
